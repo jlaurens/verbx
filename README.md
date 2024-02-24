@@ -1,2 +1,2 @@
 # verbx
-verbatim latex environments
+Enhancement of verbatim latex environment and commands

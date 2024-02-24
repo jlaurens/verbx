@@ -1,0 +1,3056 @@
+% \iffalse meta-comment
+% !TEX program  = LuaLaTeX
+% !TEX encoding = UTF-8
+%
+% File: verbx.dtx
+%
+% Run this file thrice with LuaLaTeX
+%
+% Copyright (C) 2024 Jérôme Laurens
+%
+% This file may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either
+% version 1.3c of this license or (at your option) any later
+% version. The latest version of this license is in:
+%
+%     http://www.latex-project.org/lppl.txt
+%
+% and version 1.3c or later is part of all distributions of
+% LaTeX version 2024/01/01 or later.
+%
+%<*internal>
+\def\nameofplainTeX{plain}
+\ifx\fmtname\nameofplainTeX\else
+  \expandafter\begingroup
+\fi
+%</internal>
+%<*install>
+\input docstrip.tex
+\keepsilent
+\askforoverwritefalse
+\postamble
+
+verbx --- Managing verbatim material
+
+Copyright (C) 2024 by Jérôme LAURENS <jerome.laurens@u-bourgogne.fr>
+
+This work may be distributed and/or modified under the
+conditions of the LaTeX Project Public License (LPPL), either
+version 1.3c of this license or (at your option) any later
+version.  The latest version of this license is in the file:
+
+https://www.latex-project.org/lppl.txt
+
+This work is "maintained" (as per LPPL maintenance status) by
+Jérôme LAURENS.
+
+This work consists of the file
+  \jobname.dtx
+and the derived files
+  \jobname.ins
+  \jobname.pdf
+  \jobname.sty
+  build.lua
+
+Report issues at https://github/jlaurens/verbx
+\endpostamble
+\usedir{tex/latex/\jobname}
+\generate{
+  \file{\jobname.sty}{\from{\jobname.dtx}{main.sty,final}}
+}
+%</install>
+%<install>\endbatchfile
+%<*internal>
+\usedir{source/latex/\jobname}
+\generate{
+  \file{\jobname.ins}{\from{\jobname.dtx}{install}}
+}
+\nopreamble
+\nopostamble
+\usedir{.}
+\generate{
+  \file{build.lua}{\from{\jobname.dtx}{build.lua}}
+}
+\usedir{doc/latex/\jobname}
+\generate{
+  \file{README.md}{\from{\jobname.dtx}{readme.md}}
+}
+\ifx\fmtname\nameofplainTeX
+  \expandafter\endbatchfile
+\else
+  \expandafter\endgroup
+\fi
+%</internal>
+%<*driver>
+% !TeX encoding = UTF-8
+% !TeX program = lualatex
+% !TeX proot = ...
+\PassOptionsToPackage{enable-debug}{expl3}
+\documentclass{l3doc}
+\RequirePackage{hyperref}
+\RequirePackage{enumitem}
+\RequirePackage{multirow}
+\RequirePackage{multicol}
+\RequirePackage{tcolorbox}
+%\tcbuselibrary{minted}
+\RequirePackage{unicode}
+\RequirePackage{unicode-math}
+\RequirePackage{emoji}
+\RequirePackage{fontspec}
+\setmainfont{DejaVu Serif}[ Scale = 0.95 ]
+\setmonofont{DejaVu Sans Mono}[Scale=0.90]
+\RequirePackage{\jobname}
+%\setmonofont{Source Code Pro}[Scale=MatchLowercase]
+%%%%%%%%%%%%
+% Next section is aimed to be a separate package
+%
+% \subsection{Implementation of \pkg{aup-debug}}
+%^^A:📄 debug.sty
+% \begin{aup.gobble.debug}
+%<*debug.sty>
+% \end{aup.gobble.debug}
+% \subsubsection{Package declarations}
+% \begin{aup.macrocode}
+%    \begin{macrocode}
+\ExplSyntaxOn
+%\debug_on:n {check-declarations}
+%    \end{macrocode}
+% \end{aup.macrocode}
+%
+% \begin{macro}{
+%   \AupDebugOn,
+%   \AupDebugOff,
+% }
+% These macros do nothing in normal mode
+%^^A:◆ \AupDebugOn
+%    \begin{macrocode}
+\hook_new:n { AupDebugOn }
+\NewDocumentCommand \AupDebugOn {} {
+  \hook_use:n { AupDebugOn }
+}
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+\hook_gput_code:nnn { AUP/1:b/kit_msg:m } { AupDebugOn } {
+  \tl_put_left:Nn \AupDebugOn {
+    \AUP_term:x { *****~Aup~debug~On~(\AUP_current_file: @ \the\inputlineno) }
+  }
+  \hook_gremove_code:nn { AUP/1:b/kit_msg:m } { AupDebugOn }
+}
+%</!final>
+% \end{aup.gobble.debug}
+%^^A:◆ \AupDebugOn
+%    \begin{macrocode}
+\hook_new:n { AupDebugOff }
+\NewDocumentCommand \AupDebugOff {} {
+  \hook_use:n { AupDebugOff }
+}
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+\hook_gput_code:nnn { AUP/1:b/kit_msg:m } { AupDebugOff } {
+  \tl_put_left:Nn \AupDebugOn {
+    \AUP_term:x { *****~Aup~debug~Off~(\AUP_current_file: @ \the\inputlineno) }
+  }
+  \hook_gremove_code:nn { AUP/1:b/kit_msg:m } { AupDebugOff }
+}
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+\AtBeginDocument{\AupDebugOff}
+%    \end{macrocode}
+% \end{macro}
+%
+% Next are undocumented helper functions.
+%    \begin{macrocode}
+\int_zero_new:N \l__AUP_debug_group_int
+\cs_new:Npn \AUP__debug:n #1 {
+  \exp_args:Nnnx
+  \msg_term:nnn { aup } { :n } {
+    ▃▃
+    \prg_replicate:nn { \l__AUP_debug_group_int } {▁▃}
+    \space
+    \exp_not:n { #1 }
+  }
+}
+\AUP_generate_variant:bn { _debug:n } { o, x }
+%    \end{macrocode}
+%^^A:◆ debug:n
+% \begin{macro} {
+%   \AUP_debug:n,
+%   \AUP_debug:o,
+%   \AUP_debug:x,
+% }
+% Logging arguments, only in debug mode.
+%    \begin{macrocode}
+\hook_gput_code:nnn {AupDebugOn} { aup } {
+  \cs_set_eq:NN \AUP_debug:n \AUP__debug:n
+  \AUP_generate_variant:bn { debug:n } { o, x }
+}
+\hook_gput_code:nnn {AupDebugOff} { aup } {
+  \cs_set_eq:NN \AUP_debug:n \use_none:n
+}
+\AupDebugOff
+\AUP_generate_variant:bn { debug:n } { o, x }
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{
+%   \AUP_debug_f:N,
+% \end{macro}
+%^^A:◆ debug_f:N
+%    \begin{macrocode}
+\AUP_new:bpn { debug_f:N } #1 {
+  \AUP_debug:x { ⚑~\token_to_str:N #1 ▬▶︎}
+}
+\AUP_generate_variant:bn { debug_f:N } { c }
+\hook_gput_code:nnn { AUP/1/module } { debug } {
+  \AUP_new:bpn { debug_f:mb } #1 #2 {
+    \AUP_debug_ensure_registered:mT { #1 } {
+      \AUP_debug_f:c { \AUP_c:mb { #1 } { #2 } }
+    }
+  }
+}
+%    \end{macrocode}
+% \end{macro}
+%
+% \subsubsection{Other debug mode}
+%
+% Next are undocumented public functions.
+% \begin{macro} {
+%   \AUP_debug:N,
+%   \AUP_debug:c,
+%   \AUP_debug:V,
+%   \AUP_debug:b,
+%   \AUP_debug:t,
+%   \AUP_debug:i,
+%   \AUP_debug:B,
+% }
+% Logging objects, only in debug mode.
+% \begin{aup.macrocode}
+%^^A:◆ debug:N
+%    \begin{macrocode}
+\AUP_new:bpn { debug:N } #1 {
+  \AUP_debug:n { N -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:c
+%    \begin{macrocode}
+\AUP_new:bpn { debug:c } #1 {
+  \AUP_debug:n { c -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:b
+%    \begin{macrocode}
+\AUP_new:bpn { debug:b } #1 {
+  \AUP_debug:n { b -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:t
+%    \begin{macrocode}
+\AUP_new:bpn { debug:t } #1 {
+  \AUP_debug:n { t -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug:i } #1 {
+  \AUP_debug:n { i -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:B
+%    \begin{macrocode}
+\AUP_new:bpn { debug:B } #1 {
+  \AUP_debug:n { B -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:V
+%    \begin{macrocode}
+\AUP_new:bpn { debug:V } #1 {
+  \AUP_debug:n { V -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:K
+%    \begin{macrocode}
+\AUP_new:bpn { debug:K } #1 {
+  \AUP_debug:n { K -> #1 }
+}
+%    \end{macrocode}
+% \end{aup.macrocode}
+% \end{macro}
+%
+% \begin{macro} {
+%   \AUP_debug_new:N,
+%   \AUP_debug_new:c,
+%   \AUP_debug_new:b,
+% }
+% Message logger for macro creation.
+%^^A:◆ debug_new:N
+%    \begin{macrocode}
+\AUP_new:bpn { debug_new:N } #1 {
+  \AUP_debug:x { New ▬▶︎ /\token_to_str:N #1/ }
+}
+%    \end{macrocode}
+%^^A:◆ debug_new:c
+%    \begin{macrocode}
+\AUP_generate_variant:bn { debug_new:N } { c }
+%    \end{macrocode}
+%^^A:◆ debug_new:b
+%    \begin{macrocode}
+\AUP_new:bpn { debug_new:b } #1 {
+  \AUP_debug_new:c { \AUP_c:b { #1 } }
+}
+\hook_gput_code:nnn { AUP/1/module } { debug } {
+%    \end{macrocode}
+%^^A:◆ debug_new:mb
+%    \begin{macrocode}
+  \AUP_new:bpn { debug_new:mb } #1 #2 {
+    \AUP_debug_ensure_registered:mT { #1 } {
+      \AUP_debug_new:c { \AUP_c:mb { #1 } { #2 } }
+    }
+  }
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro} {
+%   \AUP_debug_undefine:N,
+%   \AUP_debug_undefine:c,
+%   \AUP_debug_undefine:b,
+%   \AUP_debug_undefine:mb,
+% }
+% Message logger for macro deletion.
+% \begin{aup.macrocode}
+%^^A:◆ debug_undefine:N
+%    \begin{macrocode}
+\AUP_new:bpn { debug_undefine:N } #1 {
+  \AUP_debug:n { Undefine ▬▶︎ #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug_undefine:c
+%    \begin{macrocode}
+\cs_generate_variant:Nn \AUP_debug_undefine:N { c }
+%    \end{macrocode}
+%^^A:◆ debug_undefine:b
+%    \begin{macrocode}
+\AUP_new:bpn { debug_undefine:b } #1 {
+  \AUP_debug_undefine:c { \AUP_c:b { #1 } }
+}
+\hook_gput_code:nnn { AUP/1/module } { debug } {
+%    \end{macrocode}
+%^^A:◆ debug_undefine:mb
+%    \begin{macrocode}
+  \AUP_new:bpn { debug_undefine:mb } #1 #2 {
+    \AUP_debug_ensure_registered:mT { #1 } {
+      \AUP_debug_undefine:c { \AUP_c:mb { #1 } { #2 } }
+    }
+  }
+}
+%    \end{macrocode}
+% \end{aup.macrocode}
+% \end{macro}
+%
+% \begin{macro} {
+%   \AUP_debug_seq:N,
+%   \AUP_debug_seq:nN,
+%   \AUP_debug:V,
+%   \AUP_debug:b,
+%   \AUP_debug:t,
+%   \AUP_debug:i,
+%   \AUP_debug:B,
+%   \AUP_debug:K,
+% }
+% Sequence support.
+% \begin{aup.macrocode}
+%^^A:◆ debug_seq:N
+%    \begin{macrocode}
+\AUP_new:bpn { debug_seq:N } #1 {
+  \AUP_debug:x {
+    \token_to_str:N #1 ▬▶︎ / \seq_count:N #1 / \seq_use:Nn #1 ◆ /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_seq:nN
+%    \begin{macrocode}
+\AUP_new:bpn { debug_seq:nN } #1 #2 {
+  \AUP_debug:x {
+    \tl_to_str:n { #1 } ▬▶︎ / \seq_count:N #2 / \seq_use:Nn #2 ◆ /
+  }
+}
+%    \end{macrocode}
+% \AupUnitSetupPut{*}{AupSeq}{seq_new}{
+% 
+% }
+% \begin{aup.unit} {
+%   profiles=AupSeq,
+% }
+% \cs_set_eq:NN \AUP__debug:x \AUP_unit_set:x
+% 
+% \end{aup.unit}
+%    \begin{macrocode}
+\hook_gput_code:nnn { AUP/1/module } { seq } {
+  \AUP_new:bpn { debug_seq:mni } #1 #2 #3 {
+    \AUP__debug:x {
+      \tl_to_str:n { #2 }
+      ▬▶︎ / \seq_count:c { \AUP_c:mKti { #1 } l { seq } { #3 } }
+         / \seq_use:cn  { \AUP_c:mKti { #1 } l { seq } { #3 } } ◆ /
+    }
+  }
+}
+%    \end{macrocode}
+% \begin{aup.macrocode}
+% \end{macro}
+%
+% Only available in debug mode.
+% \begin{macro}{
+%   \AUP_debug_f:Nn,
+%   \AUP_debug_f:cn,
+%   \AUP_debug_f:bn,
+%   \AUP_debug_f:mbn,
+% }
+% Messaging during function execution.
+% This is not 100\%\ accurate because there is no calling stack in \TeX.
+%^^A:◼︎ debug_f:Nn
+%    \begin{macrocode}
+\AUP_new:bpn { debug_f:Nn } #1 #2 {
+%    \end{macrocode}
+%^^A:◼︎◼︎ debug_f_⟨…⟩:nn
+%    \begin{macrocode}
+  \AUP_set:bpn { debug_f_\cs_to_str:N #1 :nn } ##1 ##2 {
+    \AUP_debug:x {
+      \tl_if_empty:nTF { ##1 } { … } { \tl_to_str:n { ##1 } }
+      ▬▬▶︎\token_to_str:N #2▬▬▶︎
+      \tl_if_empty:nTF { ##2 } { … } { \tl_to_str:n { ##2 } }
+    }
+  }
+  \AUP_debug:x {
+    ⚑~\token_to_str:N #2▬▬▶︎
+    \tl_if_empty:nTF { ##2 } { … } { \tl_to_str:n { ##2 } }
+  }
+}
+%    \end{macrocode}
+%^^A:◼︎ debug_f:cn
+%    \begin{macrocode}
+\cs_generate_variant:Nn \AUP_debug_f:Nn { c }
+%    \end{macrocode}
+%^^A:◼︎ debug_f:bn
+%    \begin{macrocode}
+\AUP_new:bpn { debug_f:bn } #1 {
+  \AUP_debug_f:cn { AUP_#1 }
+}
+%    \end{macrocode}
+%^^A:◼︎ debug_f:mbn
+%    \begin{macrocode}
+\AUP_new:bpn { debug_f:mbn } #1 #2 {
+  \AUP_debug_f:cn { \AUP_c:mb { #1 } { #2 } }
+}
+%    \end{macrocode}
+%^^A:◆ debug___kv:nn
+%    \begin{macrocode}
+\tl_new:N \l__AUP_debug_tl
+\AUP_new:bpn { debug___kv:nn } #1 #2 {
+  \AUP_extract_once:nnTF {
+    ([^.:]*)([.:].*)
+  } { #1 } {
+    \str_case:nnF { ##2 } {
+      { :N } {
+        \exp_args:Nx \AUP_debug:x {
+          \tl_to_str:n { ##1 } -> / \token_to_str:N #2 /
+        }
+      }
+    } {
+      \AUP_debug:x {
+        \tl_to_str:n { ##1 } -> / \tl_to_str:n { #2 } /
+      }
+    }
+  } {
+    \AUP_debug:x {
+      \tl_to_str:n { #1 } -> / \tl_to_str:n { #2 } /
+    }
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_kv:n
+%    \begin{macrocode}
+\AUP_new:bpn { debug_kv:n } {
+  \keyval_parse:NNn
+    \AUP_debug___kv:n
+    \AUP_debug___kv:nn
+}
+%    \end{macrocode}
+%^^A:◆ debug_args_set:Nn
+%    \begin{macrocode}
+\AUP_new:bpn { debug_args_set:Nn } #1 #2 {
+  \cs_if_exist:cT { AUP_debug_f_\cs_to_str:N #1 :nn } {
+    \tl_put_right:cn { AUP_debug_f_\cs_to_str:N #1 :nn } {
+      \AUP_debug_kv:n { #2 }
+    }
+  }
+}
+%    \end{macrocode}
+% \end{macro}
+%^^A:◼︎ debug___kv:mnn
+%    \begin{macrocode}
+\tl_new:N \l__AUP_debug_after_tl
+\AUP_new:bpn { debug___kv:mnn } #1 #2 #3 {
+  \AUP_extract_once:nnTF { ([^.:]*)(?:(:[^.].*)(?:[.]([cglr]))?)? } { #2 } {
+%    \end{macrocode}
+% Captured groups for the value:
+% \begin{itemize}
+% \item[\#\#1] no |.| nor |:| for a variable name
+% \item[\#\#2] the type
+% \item[\#\#3] the specifier
+% \end{itemize}
+%    \begin{macrocode}
+    \str_case:nnF { ##2 } {
+      { :seq } {
+        \tl_set:Nx \l__AUP_tl { ##1 }
+        \tl_if_empty:nTF { ##1 } {
+          \AUP_debug:x {
+            #2 -> / \seq_use:cn {
+              \AUP_c:mKti { #1 } {
+                \tl_if_empty:nTF { ##3 } { l } { ##3 }
+              } { seq } { #3 }
+            } . /
+          }
+        } {
+          \AUP_debug:x {
+            { ##1 } -> / \seq_use:cn {
+              \AUP_c:mKti { #1 } {
+                \tl_if_empty:nTF { ##3 } { l } { ##3 }
+              } { seq } { #3 }
+            } . /
+          }
+        }        
+      }
+      { :prop } {
+        \AUP_debug:x {
+          \tl_to_str:n { ##1 } -> / \tl_to_str:n { #3 } /
+        }
+      }
+      { :after } {
+        \tl_set:N \l__AUP_debug_after_tl { #3 }
+      }
+      { :N } {
+        \AUP_debug:x { \tl_to_str:n { ##1 } -> / \token_to_str:n { #3 } / }
+      }
+      { :V } {
+        \AUP_debug:x {
+          \tl_to_str:n { ##1 } -> / \token_to_str:N ##2 / -> / \tl_to_str:V #3 /
+        }
+      }
+    } {
+      \AUP_debug:x { \tl_to_str:n { ##1 } -> / \tl_to_str:n { #3 } / }
+    }
+  } {
+    \AUP_debug:x { \tl_to_str:n { ##1 } -> / \tl_to_str:n { #3 } / }
+  }
+}
+%    \end{macrocode}
+%^^A:◼︎ debug_f_args:Nnn
+%    \begin{macrocode}
+\AUP_new:bpn { debug_f_args:Nnn } #1 #2 #3 {
+  \AUP_debug_f:Nn #1 { #2 }
+  \AUP_debug_args_set:bn #1 { #3 }
+  \AUP_debug_kv:n { #3 }
+}
+%    \end{macrocode}
+% \begin{macro}{
+%   \AUP_debug_kit:m,
+% }
+% Provides debugging facilities within a module namespace.
+% The first argument is the module name, the second one is the used module name,
+% in general the uppercase module name.
+%^^A:◆ debug_kit:m
+%    \begin{macrocode}
+\AUP_new:bpn { debug_kit:m } #1 {
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+  \bool_if:nTF {
+    \str_if_eq_p:nn { #1 } { aup }
+  } {
+    \AUP_fatal:n { Unsupported~#1 }
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_debug_kit:m{:fatal/1},
+%   profiles=no_fatal,
+% }
+% \AUP_debug_kit:m { aup } { ? }
+% \AUP_unit_should_match:nn { Unsupported } { N }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}    
+  } {
+    \cs_if_exist_use:NTF \AUP_debug_ensure_registered:mTF { #1 } { \use:n } {
+%</!final>
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_debug_kit:m{fatal/2},
+%   profiles=no_fatal,
+% }
+% \AUP_debug_kit:m { AupTest }
+% \AUP_unit_should_match:nn { AUP_register:mM } { N }
+% \end{aup.unit}
+%^^A:◼︎ <…>_debug_f:bn
+%    \begin{macrocode}
+  \AUP_wrap:mN { #1 } \AUP_debug_f:mbn
+%    \end{macrocode}
+% \begin{aup.unit}{
+%   :Nn=\AUP_debug_kit:m{fatal/2},
+%   profiles=AupTest,
+%   debug,
+% }
+% \tracingall
+% \AUP_debug_kit:m { AupTest }
+% \AUPTEST_debug_f:bn { bar: } { baz }
+% \end{aup.unit}
+%
+%
+%^^A:◆ <…>_debug_kv:n
+%    \begin{macrocode}
+  \AUP_wrap:mN { #1 } \AUP_debug___kv:mnn
+  \AUP_new:mbpn { #1 } { debug_kv:n } ##1 {
+    \tl_clear:N \l__AUP_debug_after_tl
+    \exp_args:NNc
+    \keyval_parse:NNn
+      \AUP_debug:n
+      { \AUP_c:mb { #1 } { debug___kv:nn } }
+      { ##1 }
+      \l__AUP_debug_after_tl
+  }
+  \AUP_new:mbpn { #1 } { debug_args_set:Nn } ##1 ##2 {
+    \cs_if_exist:cT { \AUP_c:mb { #1 } { debug_f_\cs_to_str:N ##1 :nn } } {
+      \tl_put_right:cn { \AUP_c:mb { #1 } { debug_f_\cs_to_str:N ##1 :nn } } {
+        \AUP_use:mb { #1 } { debug_kv:n } { ##2 }
+      }
+    }
+  }
+  \AUP_generate_variant:mbn { #1 } { debug_args_set:Nn } { c }
+  \AUP_new:mbpn { #1 } { debug_args_set:bn } ##1 {
+    \AUP_use:mb { #1 } { debug_args_set:cn } { \AUP_c:mb { #1 } { ##1 } }
+  }
+  \AUP_new:mbpn { #1 } { debug_f_args:bnn } ##1 ##2 ##3 {
+    \AUP_use:mb { #1 } { debug_f:bn } { ##1 } { ##2 }
+    \AUP_use:mb { #1 } { debug_args_set:bn } { ##1 } { ##3 }
+    \AUP_use:mb { #1 } { debug_kv:n } { ##3 }
+  }
+
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+    }
+  }
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+}
+%    \end{macrocode}
+% \end{macro}
+%    \begin{macrocode}
+\AUP_new:bpn { debug_args_set:bn } #1 #2 {
+  \AUP_set:bpn { debug_current:nn } ##1 ##2 {
+    \AUP_debug_f:nbn { ##1 } { #1 } { ##2 }
+    #2
+  }
+  \AUP_debug_current:b { #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:mKti
+%    \begin{macrocode}
+\AUP_new:bpn { debug:mKti } #1 #2 #3 #4 {
+  \AUP__debug:x {
+    \AUP_use_N:mNKti \token_to_str:N #1 { #2 } { #3 } { #4 }
+    -> / \AUP_use_n:mNKti \tl_to_str:n #1 { #2 } { #3 } { #4 } /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_tl:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug_tl:i } #1 {
+  \AUP__debug:x {
+    \AUP_tl_use_N:Ni \token_to_str:N { #1 }
+    -> / \AUP_tl_use_n:Ni \tl_to_str:n { #1 } /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_tl:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug_int:i } #1 {
+  \AUP__debug:x {
+    \AUP_int_use_N:Ni \token_to_str:N { #1 }
+    -> / \AUP_int_use_N:Ni \tl_to_str:n { #1 } /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_tl:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug_tl:ni } #1 #2 {
+  \AUP__debug:x {
+    \tl_if_empty:nF { #1 } { #1 -> }
+    \AUP_tl_use:Ni \token_to_str:N  { #2 }
+    -> / \AUP_tl_use:Ni \tl_to_str:n { #2 } /
+  }
+}
+\cs_generate_variant:Nn \tl_to_str:n { x }
+%    \end{macrocode}
+%^^A:◆ debug_tl:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug_seq:xi } #1 #2 {
+  \AUP__debug:x {
+    #1
+    ▬▶︎ / \seq_count:c { \AUP_c:mKti { aup } l { seq } { #2 } }
+       / \seq_use:cn { l__AUP_#2_seq } . /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_tl:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug_seq:i } #1 {
+  \AUP__debug:x {
+    \token_to_str:c { l__AUP_#1_seq }
+    ▬▶︎ / \seq_count:c { l__AUP_#1_seq }
+       / \seq_use:cn { l__AUP_#1_seq } . /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_require:N
+%    \begin{macrocode}
+\seq_new:N \g__AUP_debug_required_seq
+\AUP_new:bpn { debug_require:N } #1 {
+  \cs_if_exist:NF #1 {
+    \AUP_debug:x { No~\token_to_str:N #1~available }
+    \seq_gpush:Nn \g__AUP_debug_required_seq { #1 }
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_require:NT
+%    \begin{macrocode}
+\AUP_new:bpn { debug_require:NT } #1 #2 {
+  \cs_if_exist:NTF #1 { #2 } {
+    \AUP_debug:x { No~\token_to_str:N #1~available }
+    \seq_gpush:Nn \g__AUP_debug_required_seq { #1 }
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_require:NTF
+%    \begin{macrocode}
+\AUP_new:bpn { debug_require:NTF } #1 #2 #3 {
+  \cs_if_exist:NTF #1 { #2 } {
+    \AUP_fatal:n { No~\token_to_str:N #1~available }
+    #3
+  }
+}
+\hook_gput_code:nnn { AUP/1:b/generate_c_b:mb } { . } {
+  \AUP_generate_c_b:mb { aup } { debug_require:N }
+}
+\hook_gput_code:nnn { AUP/1:b/generate_c_mb:N } { . } {
+  \AUP_generate_c_mb:N \AUP_debug_require:NTF
+}
+%    \end{macrocode}
+%
+% \subsubsection{Signed functions}
+% Utility functions available only on debugging.
+% \begin{function}{
+%   \AUP_debug_if_signed:nNTF,
+%   \AUP_debug_if_signed:ncTF,
+%   \AUP_debug_if_head_signed:nNTF,
+%   \AUP_debug_if_head_signed:ncTF,
+% }
+% \begin{syntax}
+% \cs{AUP_debug_if_signed:nNTF} \marg{signature} \meta{function} \marg{true code} \marg{false code}
+% \cs{AUP_debug_if_head_signed:nNTF} \marg{signature} \meta{function} \marg{true code} \marg {false code}
+% \end{syntax}
+% Execute \marg {true code} if the signature of \meta{function} is exactly \meta{signature},
+% otherwise if raises and execute \marg {false code} when the raise is catched.
+% In the |head| variants, only the start of the signature is tested.
+% \end{function}
+% \begin{aup.gobble.debug}
+%^^A:◆ debug_if_signed:nNTF
+%<*!final>
+\AUP_new:bpn { debug_if_signed:nNTF } #1 #2 #3 #4 {
+  \AUP_if_signed:nNTF { #1 } #2 { #3 } {
+    \AUP_fatal:x {
+      \token_to_str:N #2~signature~should~be~`#1'~instead~of~
+      `\exp_last_unbraced:Nf \use_ii:nnn { \cs_split_function:N #2 }'
+    }
+    #4
+  }
+}
+%</!final>
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :N=\AUP_debug_if_signed:nNTF,
+%   profiles=no_fatal,
+% }
+% \AUP_debug_if_signed:nNTF { } { \AUPTEST: } {
+%   \AUP_unit_set:n { ! }
+% } {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_match:nn { ! } { 1 }
+% \AUP_debug_if_signed:nNTF { } { \AUPTEST:n } {
+%   \AUP_unit_set:n { ! }
+% } {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_equal:nn { !! } { 2 }
+% \AUP_debug_if_signed:nNTF { n } { \AUPTEST:n } {
+%   \AUP_unit_set:n { ! }
+% } {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_match:nn { ! } { 3 }
+% \AUP_debug_if_signed:nNTF { n } { \AUPTEST: } {
+%   \AUP_unit_set:n { ! }
+% } {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_match:nn { !! } { 4 }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+%^^A:◆ debug_if_signed:ncTF
+%    \begin{macrocode}
+%<*!final>
+\AUP_new:bpn { debug_if_signed:ncTF } #1 #2 #3 #4 {
+  \exp_args:Nnc \AUP_debug_if_signed:nNTF { #1 } { #2 } { #3 } { #4 }
+}
+%    \end{macrocode}
+%^^A:◆ debug_if_head_signed:nNTF
+%    \begin{macrocode}
+\cs_new:Npn \AUP_debug_if_head_signed:nNTF #1 #2 #3 #4 {
+  \AUP_if_head_signed:nNTF { #1 } #2 {
+    #3
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   :N=\AUP_debug_if_head_signed:nNTF,
+%   profiles=AupTest,
+% }
+% \AUP_debug_if_head_signed:nNTF {} \AUPTEST_TEST:n {
+%   \AUP_unit_set:n { ! }
+% } {}
+% \AUP_unit_should_equal:nn { ! } { 1 }
+% \AUP_debug_if_head_signed:nNTF { n } \AUPTEST_TEST:n {
+%   \AUP_unit_set:n { ! }
+% } {}
+% \AUP_unit_should_equal:nn { ! } { 2 }
+% \AUP_debug_if_head_signed:nNTF { } \AUPTEST_TEST:n {
+%   \AUP_unit_set:n { ! }
+% } {}
+% \AUP_unit_should_equal:nn { ! } { 3 }
+% \AUP_debug_if_head_signed:nNTF { nn } \AUPTEST_TEST:nnn {
+%   \AUP_unit_set:n { ! }
+% } {}
+% \AUP_unit_should_equal:nn { ! } { 3 }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+  } {
+    \AUP_fatal:x {
+      \token_to_str:N #2 ~signature~should~start~with~`#1'~instead~of~
+      `\exp_last_unbraced:Nf \use_ii:nnn { \cs_split_function:N #2 }' 
+    }
+    #4
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   :N=\AUP_debug_if_head_signed:nNTF,
+%   profiles={AupTest,no_fatal},
+% }
+% \AUP_debug_if_head_signed:nNTF { n } \AUPTEST_TEST: {} {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_equal:nn { !! } { 1 }
+% \AUP_debug_if_head_signed:nNTF { nn } \AUPTEST_TEST:n {} {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_equal:nn { !! } { 2 }
+% \AUP_debug_if_head_signed:nNTF { nnn } \AUPTEST_TEST:nn {} {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_equal:nn { !! } { 3 }
+% \AUP_debug_if_head_signed:nNTF { Nn } \AUPTEST_TEST:n {} {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_equal:nn { !! } { 4 }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+  }
+}
+%</!final>
+%    \end{macrocode}
+% \end{aup.gobble.debug}
+% \begin{aup.gobble.debug}
+%^^A:◆ debug_if_head_signed:ncTF
+%    \begin{macrocode}
+\AUP_gset:bpn { debug_if_head_signed:ncTF } #1 #2 {
+  \exp_args:Nnc \AUP_debug_if_head_signed:nNTF { #1 } { #2 }
+}
+%    \end{macrocode}
+% \end{aup.gobble.debug}
+%
+% \begin{aup.gobble.debug}
+% \end{aup.gobble.debug}
+%^^A:◆ use_signed:FnN+debug
+%    \begin{macrocode}
+\AUP_gset:bpn { use_signed:FnN } #1 #2 #3 {
+  \AUP_debug_if_signed:nNTF { #2 } #3 {} { #1 }
+}
+%    \end{macrocode}
+%^^A:◆ use_head_signed:FnN+debug
+%    \begin{macrocode}
+\AUP_gset:bpn { use_head_signed:FnN } #1 #2 #3 {
+  \AUP_debug_if_head_signed:nNTF { #2 } #3 {} { #1 }
+}
+%    \end{macrocode}
+% \end{aup.macrocode}
+% \end{macro}
+% \begin{aup.unit}{
+%   noigre,
+%   :N=\AUP_use_signed:Fnc,
+%   profiles=no_fatal,
+% }
+% \AUP_use_signed:Fnc {} {} { AUPTEST:n }
+% \AUP_unit_should_match:nn { signature } { 1 }
+% \AUP_use_signed:Fnc {} { n } { AUPTEST: }
+% \AUP_unit_should_match:nn { signature } { 2 }
+% \cs_new:Npn \AUPTEST:n #1 {
+%   \AUP_unit_set:n { #1 }
+% }
+% \AUP_use_signed:Fnc {
+%   \AUP_unit_set:n { ! }
+%   \use_none:n
+% } { } { AUPTEST:n } { !! }
+% \AUP_unit_should_equal:nn { ! } { 3 }
+% \cs_new:Npn \AUPTEST: {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_use_signed:Fnc {
+%   \AUP_unit_set:n { ! }
+% } { n } { AUPTEST: }
+% \AUP_unit_should_equal:nn { ! } { 4 }
+% \AUP_use_signed:Fnc {
+%   \AUP_unit_set:n { ! }
+%   \use_none:n
+% } { n } { AUPTEST:n } { !! }
+% \AUP_unit_should_equal:nn { !! } { 5 }
+% \AUP_use_signed:Fnc {
+%   \AUP_unit_set:n { ! }
+% } {  } { AUPTEST: }
+% \AUP_unit_should_equal:nn { !! } { 6 }
+% \cs_undefine:N \AUPTEST:
+% \cs_undefine:N \AUPTEST:n
+% \end{aup.unit}
+%^^A:◆ use_head_signed:Fnc
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use_signed:FnN{:c/Fail},
+%   profiles={AupTest, no_fatal},
+% }
+% \AUP_use_signed:FnN { \AUP_unit_set:n { !  } } { x } \foo:N
+% \AUP_unit_should_equal:nn { ! } { 1 }
+% \AUP_use_signed:Fnc { \AUP_unit_set:n { !  } } { x } { foo:N }
+% \AUP_unit_should_equal:nn { ! } { 2 }
+% \AUP_use_signed:FnN { \AUP_unit_set:n { !! } } { x } \foo:x
+% \AUP_unit_should_match:nn { No~ } { 3 }
+% \AUP_use_signed:Fnc { \AUP_unit_set:n { !! } } { x } { foo:x }
+% \AUP_unit_should_match:nn { No~ } { 4 }
+% \end{aup.unit}
+%
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use_signed:FnN{:c},
+%   profiles=AupTest,
+% }
+% \cs_new:Npn \AUPTEST: { \AUP_unit_set:n { ! } }
+% \AUP_use_signed:FnN { \AUP_unit_set:n { !! } } { } \AUPTEST:
+% \AUP_unit_should_equal:nn { ! } { … }
+% \AUP_use_signed:Fnc { \AUP_unit_set:n { !! } } { } { AUPTEST: }
+% \AUP_unit_should_equal:nn { ! } { … }
+% \cs_new:Npn \AUPTEST:n #1 { \AUP_unit_set:n { #1 } }
+% \AUP_use_signed:FnN { \AUP_unit_set:n { !! } } { n } \AUPTEST:n { ! }
+% \AUP_unit_should_equal:nn { ! } { … }
+% \AUP_use_signed:Fnc { \AUP_unit_set:n { !! } } { n } { AUPTEST:n } { ! }
+% \AUP_unit_should_equal:nn { ! } { … }
+% \end{aup.unit}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use_head_signed:FnN{Fail},
+%   profiles={AupTest, no_fatal},
+% }
+% \AUP_use_head_signed:FnN {} { xV } \foo:xnN
+% \AUP_unit_should_match:nn { signature.should.start } { 1 }
+% \AUP_use_head_signed:FnN {} { nn } \foo:nnNN
+% \AUP_unit_should_match:nn { No.*available } { 2 }
+% \AUP_use_head_signed:FnN { \AUP_unit_set:n { !  } } { xV } \foo:xnN
+% \AUP_unit_should_equal:nn { !  } { 3 }
+% \AUP_use_head_signed:FnN { \AUP_unit_set:n { !! } } { nn } \foo:nnNN
+% \AUP_unit_should_match:nn { No.*available } { 4 }
+% \end{aup.unit}
+% \begin{aup.unit}{
+%   noigre,
+%   :N=\AUP_use_head_signed:FnN,
+%   profiles=AupTest,
+% }
+% \cs_new:Npn \AUPTEST:n #1 { \AUP_unit_set:n { #1 } }
+% \AUP_use_head_signed:FnN { \AUP_unit_set:n { !! } } { n } \AUPTEST:n { ! }
+% \AUP_unit_should_equal:nn { ! } { 1 }
+% \cs_new:Npn \AUPTEST:nn #1 #2 { \AUP_unit_set:n { #1 #2 } }
+% \AUP_use_head_signed:FnN { \AUP_unit_set:n { ! } } { n } \AUPTEST:nn { ! } { ! }
+% \AUP_unit_should_equal:nn { !! } { 2 }
+% \end{aup.unit}
+%
+% \begin{macro}{
+%   \AUP_use:NN,
+%   \AUP_use:Nc,
+%   \AUP_use:cN,
+%   \AUP_use:cc,
+%}
+% In debug mode, ensure that the first argument exists and has the proper signature
+% before usage.
+% \begin{aup.macrocode}
+%^^A:◆ use:N+debug
+%    \begin{macrocode}
+\AUP_gset:bpn { use:N } #1 {
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+\AUP_debug_kv:n {
+  N:N = #1,
+}
+  \cs_if_exist:NTF #1 {
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+  #1
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+    } {
+    \AUP_fatal:x { Unknown~command~\token_to_str:N #1~(N) }
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use:N{:c},
+%   profiles=no_fatal,
+% }
+% \AUP_should_unexist:nNn { cs } \AUPTEST: { 0 }
+% \AUP_use:N \AUPTEST:
+% \AUP_unit_should_match:nn { AUPTEST: } { 1 }
+% \AUP_use:c { AUPTEST:: }
+% \AUP_unit_should_match:nn { AUPTEST: } { 2 }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+  }
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+}
+%    \end{macrocode}
+% \end{aup.macrocode}
+% \end{macro}
+%
+% \begin{macro}{
+%   \AUP_use:NN,
+%   \AUP_use:Nc,
+%   \AUP_use:cN,
+%   \AUP_use:cc,
+%}
+% In debug mode, ensure that the first argument exists and has the proper signature
+% before usage.
+% \begin{aup.macrocode}
+%^^A:◆ use:NN+debug
+%    \begin{macrocode}
+\AUP_gset:bpn { use:NN } #1 #2 {
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+\AUP_debug_kv:n {
+  1:N = #1,
+  2:N = #2,
+}
+  \cs_if_exist:NTF #1 {
+\AUP_debug:n { *****~A }
+    \AUP_debug_if_head_signed:nNTF N #1 {
+\AUP_debug:n { *****~B }
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+  #1 #2
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+    } {
+\AUP_debug:n { *****~C }
+      \AUP_debug_if_head_signed:nNTF V #1 {
+\AUP_debug:n { *****~D }
+        #1 #2
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use:NN{:c/Fail_1},
+%   profiles={AupTest,AupType,no_fatal},
+% }
+% \cs_new:Npn \AUPTEST_TEST:V #1 {
+%   \AUP_unit_set:V #1
+% }
+% \tl_new:N  \l__AUPTEST_id_AupType
+% \AUP_unit_teardown_put:n {
+%   \cs_undefined:N \l__AUPTEST_id_AupType
+% }
+% \tl_set:Nn \l__AUPTEST_id_AupType { !lNN }
+% \AUP_use:NN \AUPTEST_TEST:V \l__AUPTEST_id_AupType
+% \AUP_unit_should_equal:nn { !lNN } { … }
+% \tl_set:Nn \l__AUPTEST_id_AupType { !lNc }
+% \AUP_use:Nc \AUPTEST_TEST:V { l__AUPTEST_id_AupType }
+% \AUP_unit_should_equal:nn { !lNc } { … }
+% \tl_set:Nn \l__AUPTEST_id_AupType { !lcc }
+% \AUP_use:cc { AUPTEST_TEST:V } { l__AUPTEST_id_AupType }
+% \AUP_unit_should_equal:nn { !lcc } { … }
+% \tl_set:Nn \l__AUPTEST_id_AupType { !lcN }
+% \AUP_use:cN { AUPTEST_TEST:V } \l__AUPTEST_id_AupType
+% \AUP_unit_should_equal:nn { !lcN } { … }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+      } {
+\AUP_debug:n { *****~E }
+        \AUP_fatal:x { Bad~signature~\token_to_str:N #1~(V) }
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use:NN{:c/Fail_1},
+%   profiles={AupTest,no_fatal},
+% }
+% \cs_new:Npn \AUPTEST_TEST:n #1 {}
+% \AUP_use:NN \AUPTEST_TEST:n \relax
+% \AUP_unit_should_match:nn { signature } { … }
+% \cs_new:Npn \AUPTEST_TEST: {}
+% \AUP_use:NN \AUPTEST_TEST: \relax
+% \AUP_unit_should_match:nn { signature } { … }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+      }
+    }
+  } {
+\AUP_debug:n { *****~F }
+    \AUP_fatal:x { Unknown~command~\token_to_str:N #1~(N) }
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_l_use_N:Nmti{:c},
+%   profiles={AupTest,no_fatal},
+% }
+% \AUP_l_use_N:Nmti \AUPTEST_TEST:N {} {} {}
+% \AUP_unit_should_match:nn { Unknown } { … }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+  }
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+}
+%    \end{macrocode}
+% \end{aup.macrocode}
+% \end{macro}
+%
+% \begin{aup.gobble.debug}
+%</debug.sty>
+% \end{aup.gobble.debug}
+%^^A:📄 debug.sty
+\ExplSyntaxOff
+
+%%%%%%%%%%%%
+\RenewDocumentEnvironment{arguments}{}
+  {
+    \enumerate [
+      label = \texttt{\#\arabic*} ~ : ,
+      labelsep = * ,
+      left= -1.5\parindent .. 0pt,
+      format=\ttfamily\small\bfseries,
+    ]
+  }
+  {
+    \endenumerate
+  }
+\ExplSyntaxOn
+\cs_new:Npn \VERBXNote {
+  \msg_note:nnn { aup } { :n }
+}
+% l3doc extension
+\DeclareDocumentEnvironment { environment } { O{} +v }
+  {
+    \bool_if:NTF \l__codedoc_in_implementation_bool {
+      \exp_args:NnV \__codedoc_macro:nnw {#1} { #2 }
+    } {
+      \exp_args:NnV \__codedoc_function:nnw {#1} { #2 }
+    }
+  }
+  {
+    \bool_if:NTF \l__codedoc_in_implementation_bool
+      { \__codedoc_macro_end: }
+      { \__codedoc_function_end: }
+  }
+\ExplSyntaxOff
+{\ignorespacesafterend}{}
+\ProvideDocumentEnvironment{verbxMacrocode}{}{
+  \setlength{\topsep}{0.4em plus 0.15 em minus 0.15 em}
+  \begin{trivlist}
+  \setlist[trivlist]{nosep}
+  \item\vspace{-\baselineskip}
+}{
+  \end{trivlist}
+}
+\ProvideDocumentEnvironment{verbxMacrocode}{}{
+  \setlength{\topsep}{0.4em plus 0.15 em minus 0.15 em}
+  \begin{trivlist}
+  \setlist[trivlist]{nosep}
+  \item\vspace{-\baselineskip}
+}{
+  \end{trivlist}
+}
+\ExplSyntaxOn
+\ProvideDocumentEnvironment{verbxGobbleDebug}{+b}{
+  \ignorespacesafterend
+}{}
+\ExplSyntaxOff
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\title{Verbatim material}
+\author{Jérôme Laurens}
+\providecommand\AupFileVersion{?}
+\providecommand\AupFileDate{?}
+\date{\AupFileVersion \qquad \AupFileDate}
+%\OnlyDescription
+% This is a series ot tests to ensure that the testing utilities are correct.
+\begin{document}
+\maketitle
+\changes{v1.0}{2024/02/14}{First public release}
+\begin{abstract}
+This package extends the standard "\verb" command and
+"verbatim" environment with "\VerbX" and "VerbatimX" environment.
+Many limitations are removed and new possibilities are available.
+\end{abstract}
+\tableofcontents
+\StopEventually{
+  \PrintChanges
+  \PrintIndex
+}
+\begin{documentation}
+\section{The \protect\cs[no-index]{VerbX} command}
+
+\section{Support}
+%
+See \url{https://github.com/jlaurens/aup}.
+One can report issues.
+%
+\end{documentation}
+\DocInput{\jobname.dtx}
+\end{document}
+%</driver>
+% 
+% \fi
+%
+% \begin{implementation}
+%
+% \section{Implementation}
+%
+% Identify the internal prefix (\LaTeX3 \pkg{DocStrip} convention, unused).
+% \begin{verbxMacrocode}
+%    \begin{macrocode}
+%<@@=verbx>
+%    \end{macrocode}
+% \end{verbxMacrocode}
+% Reserved namespace:
+% identifiers containing the case sensitive word |AUP| or
+% the case insensitive string |aup| delimited by two non characters.
+%
+% \subsection{General discussion}
+% We have different families of functions:
+% \begin{itemize}
+% \item core base |\VERBX_c:b|, |\VERBX_new:bpn|, |\VERBX_generate_variant:bn|.
+% \item core message |\VERBX_term:n| and alike.
+% \item debug functions.
+% \item module functions are those with an argument specification starting with |m|.
+% \item unit functions.
+% \item assertion functions.
+% \end{itemize}
+%
+% \subsection{Implementation of \pkg{aup-core}, first part}
+%^^A:📄 core.sty:
+% \begin{verbxGobbleDebug}
+%<*core.sty>
+% \end{verbxGobbleDebug}
+%
+% \subsubsection{Package declarations}
+%
+% \begin{verbxMacrocode}
+%    \begin{macrocode}
+\ProvideDocumentCommand\AupCoreFileDate{}{2023/01/07}
+\ProvideDocumentCommand\AupCoreFileVersion{}{1.0}
+\NeedsTeXFormat{LaTeX2e}[2023/01/07]
+\ExplSyntaxOn
+\exp_args:Nnff
+\ProvidesExplPackage
+%<*final>
+  {aup-core}
+%</final>
+%<*!final>
+  {aup-core__debug}
+%</!final>
+  {\AupCoreFileDate}
+  {\AupCoreFileVersion}
+  {A utility package (for beanoves)}
+\lua_now:e { AUP=AUP\space or\space\string{\string} }
+%    \end{macrocode}
+% \end{verbxMacrocode}
+%
+% \subsubsection{Core base}
+%
+% \begin{macro} {
+%   \VERBX_c:b,
+%   \VERBX_new:bpn,
+%   \VERBX_gset:bpn,
+%   \VERBX_set:bpn,
+%   \VERBX_undefine:b,
+%   \VERBX_generate_variant:bn,
+% }
+% Defining \pkg{aup} namespace.
+%^^A:◆ \VERBX_c:b:
+% \begin{verbxMacrocode}
+%    \begin{macrocode}
+\cs_new:Npn \VERBX_c:b #1 {
+  AUP_#1
+}
+%    \end{macrocode}
+%^^A:◆ \VERBX_new|gset|set:bpn
+%    \begin{macrocode}
+\clist_map_inline:nn { new, gset, set } {
+  \cs_new:cpn { \VERBX_c:b { #1:bpn } } ##1 {
+    \use:c { cs_#1:cpn } { \VERBX_c:b { ##1 } }
+  }
+}
+%    \end{macrocode}
+%^^A:◆ undefine:b
+%    \begin{macrocode}
+\VERBX_new:bpn { undefine:b } #1 {
+%    \end{macrocode}
+% \begin{verbxGobbleDebug}
+%<*!final>
+  \VERBX_debug_undefine:b { #1 }
+%</!final>
+% \end{verbxGobbleDebug}
+%    \begin{macrocode}
+  \cs_undefine:c { \VERBX_c:b { #1 } }
+}
+%    \end{macrocode}
+%^^A:◆ generate_variant:bn
+%    \begin{macrocode}
+\cs_generate_variant:Nn \cs_generate_variant:Nn { c }
+\VERBX_new:bpn { generate_variant:bn } #1 {
+  \cs_generate_variant:cn { \VERBX_c:b { #1 } }
+}
+%    \end{macrocode}
+% \end{verbxMacrocode}
+% \end{macro}
+%
+% \begin{macro} {
+%   \VERBX_use:N,
+%   \VERBX_use:c,
+%   \VERBX_use:b,
+% }
+% |\VERBX_use:N| is a noop in normal mode. In debug mode, raises if the command does not exist.
+% Useful when testing.
+% \begin{verbxMacrocode}
+%^^A:◆ use:N
+%    \begin{macrocode}
+\VERBX_new:bpn { use:N } #1 {
+  #1
+%    \end{macrocode}
+% \AupUnitTeardownPut{*}{AupTest}{*}{
+%   \cs_undefine:N \AUPTEST:
+% }
+% \begin{aup.unit}{
+%   debug,
+%   profiles={AupTest},
+% }
+% \end{aup.unit}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\VERBX_use:N{:c/fail},
+%   profiles=AupTest,
+% }
+% \cs_new:Npn \AUPTEST: {
+%   \VERBX_unit_set:n { ! }
+% }
+% \VERBX_use:N \AUPTEST:
+% \VERBX_unit_should_equal:nn { ! } { N }
+% \end{aup.unit}
+%    \begin{macrocode}
+}
+%    \end{macrocode}
+%^^A:◆ use:b
+%    \begin{macrocode}
+\VERBX_generate_variant:bn { use:N } { c }
+\VERBX_new:bpn { use:b } #1 {
+  \use:c { \VERBX_c:b { #1 } }
+}
+\hook_gput_code:nnn { AUP/1:b/generate_c_mb:N } { . } {
+  \VERBX_generate_c_mb:N \VERBX_use:N
+}
+%    \end{macrocode}
+% \begin{aup.unit}{
+%   noigre,
+%   :N=\VERBX_use:c,
+% }
+% \cs_new:Npn \VERBX_unit: { \VERBX_unit_set:n { ! } }
+% \VERBX_unit_teardown_put:n {
+%   \cs_undefine:N \VERBX_unit:
+% }
+% \VERBX_use:c { AUP_unit: }
+% \VERBX_unit_should_equal:nn { ! } { … }
+% \end{aup.unit}
+% Some more tools were defined in the background for testing.^^A
+% Just like |\use:c| but raises in debug mode when the command does not exist.
+% \begin{aup.unit}{
+%   noigre,
+%   :N=\VERBX_use:c,
+%   profiles=no_fatal,
+% }
+% \VERBX_use:c { AUP_unit: }
+% \VERBX_unit_should_match:nn { AUP_unit: } { … }
+% \end{aup.unit}
+% \end{verbxMacrocode}
+% \end{macro}
+% 
+% \subsubsection{Grouping}
+% \begin{macro} {
+%   \VERBX_begin:,
+%   \VERBX_end:,
+% }
+% Group management. On debug mode some extra management is performed through hooks
+% |AUP/:b/begin:| and |AUP/:b/end:|.
+% \begin{verbxMacrocode}
+%    \begin{macrocode}
+\hook_new:n { AUP/:b/begin: }
+%    \end{macrocode}
+%^^A:◆ begin:
+%    \begin{macrocode}
+\VERBX_new:bpn { begin: } {
+  \group_begin:
+  \hook_use:n { AUP/:b/begin: }
+}
+\hook_new_reversed:n { AUP/:b/end: }
+%    \end{macrocode}
+%^^A:◆ \end:
+%    \begin{macrocode}
+\VERBX_new:bpn { end: } {
+  \hook_use:n { AUP/:b/end: }
+  \group_end:
+}
+%    \end{macrocode}
+% \end{verbxMacrocode}
+% \end{macro}
+%
+% \subsubsection{Messaging}
+%
+%^^A:◆ term:n
+% \begin{macro} {
+%   \VERBX_term:n,
+%   \VERBX_term:f,
+%   \VERBX_term:x,
+%   \VERBX_warning:n,
+%   \VERBX_warning:f,
+%   \VERBX_warning:x,
+%   \VERBX_error:n,
+%   \VERBX_error:f,
+%   \VERBX_error:x,
+%   \VERBX_fatal:n,
+%   \VERBX_fatal:f,
+%   \VERBX_fatal:x,
+%   \VERBX_error:nn,
+%   \VERBX_error:nx,
+%   \VERBX_error:xn,
+%   \VERBX_error:xx,
+% }
+% General messaging kit
+%    \begin{macrocode}
+\msg_new:nnn { aup } { :n } { #1 }
+\msg_new:nnn { aup } { :nn } { #1~(#2) }
+\clist_map_inline:nn { term, error, warning, fatal } {
+  \VERBX_new:bpn { #1:n } ##1 {
+    \use:c { msg_#1:nnn } { aup } { :n } { ##1 }
+  }
+  \VERBX_generate_variant:bn { #1:n } { f, x }
+}
+\VERBX_new:bpn { error:nn } {
+  \msg_error:nnnn { aup } { :nn }
+}
+\VERBX_generate_variant:bn { error:nn } { xn, nx, xx }
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro} {
+%   \AupExpl,
+% }
+% The sole argument is executed as |expl| code.
+% \begin{syntax}
+% \cs{AupExpl}\{
+% ~~\meta{code}
+% \}
+% \end{syntax}
+% The \meta{code} should start and end on its own line.
+% The current implementation does not support generic after hooks.
+%^^A:◆ \AupExpl
+%    \begin{macrocode}
+\NewDocumentCommand\AupExpl{}{
+  \cctab_begin:N \c_code_cctab
+  \VERBX_expl:n
+}
+\cs_new:Npn \VERBX_expl:n #1 {
+  #1
+  \cctab_end:
+}
+%    \end{macrocode}
+% \end{macro}
+%^^A:◆ extract_once:nnTF
+% \begin{macro}{
+%   \VERBX_extract_once:nnTF,
+%   \VERBX_extract_once:nNTF,
+% }
+% Utility function to branch according to a regex with captured groups.
+% \begin{verbxMacrocode}
+%    \begin{macrocode}
+\tl_const:Nn \c__AUP_ix_args_tl { #1#2#3#4#5#6#7#8#9 }
+\seq_new:N \l__AUP_match_seq
+\VERBX_new:bpn { extract_once:nnTF } #1 #2 #3 #4 {
+  \exp_args:Nnf
+  \regex_extract_once:nnNTF {
+    \A #1 \Z
+  } { #2 } \l__AUP_match_seq {
+    \exp_after:wN \cs_set:Npn \exp_after:wN \VERBX__:w \c__AUP_ix_args_tl { #3 }
+    \exp_last_unbraced:NNV \cs_set:Npn \VERBX__:w \c__AUP_ix_args_tl { #3 }
+    \exp_args:Nnf \use:n {
+      \exp_args:Nnff \use:n {
+        \exp_args:Nnff \use:n {
+          \exp_args:Nnff \use:n {
+            \exp_args:Nff \VERBX__:w {
+               \seq_item:Nn \l__AUP_match_seq {2}
+            } {
+               \seq_item:Nn \l__AUP_match_seq {3}
+            }
+          } {
+             \seq_item:Nn \l__AUP_match_seq {4}
+          } {
+             \seq_item:Nn \l__AUP_match_seq {5}
+          }
+        } {
+           \seq_item:Nn \l__AUP_match_seq {6}
+        } {
+         \seq_item:Nn \l__AUP_match_seq {7}
+        }
+      } {
+         \seq_item:Nn \l__AUP_match_seq {8}
+      } {
+         \seq_item:Nn \l__AUP_match_seq {9}
+      }
+    } {
+      \seq_item:Nn \l__AUP_match_seq {10}
+    }
+  } {
+    #4
+  }
+}
+%    \end{macrocode}
+%^^A:◆ extract_once:nNTF
+%    \begin{macrocode}
+\VERBX_new:bpn { extract_once:nNTF } #1 #2 {
+  \VERBX_extract_once:nnTF { #1 } { \cs_to_str:N #2 }
+}
+%    \end{macrocode}
+%^^A:◆ extract_once:nnT
+%    \begin{macrocode}
+\VERBX_new:bpn { extract_once:nnT } #1 #2 #3 {
+  \VERBX_extract_once:nnTF { #1 } { #2 } { #3 } {}
+}
+%    \end{macrocode}
+%^^A:◆ extract_once:nNT
+%    \begin{macrocode}
+\VERBX_new:bpn { extract_once:nNT } #1 #2 {
+  \VERBX_extract_once:nnT { #1 } { \cs_to_str:N #2 }
+}
+%    \end{macrocode}
+% \end{verbxMacrocode}
+% \end{macro}
+%
+%^^A:◆ if_signed:nNTF
+% \begin{verbxMacrocode}
+%    \begin{macrocode}
+\exp_args:Nc \prg_new_conditional:Npnn { \VERBX_c:b { if_signed:nN } } #1 #2 { T, F, TF } {
+  \exp_args:Nnx \str_if_eq:nnTF { #1 } {
+    \exp_last_unbraced:Nf \use_ii:nnn { \cs_split_function:N #2 }
+  } {
+    \prg_return_true:
+  } {
+    \prg_return_false:
+  }
+}
+%    \end{macrocode}
+% \begin{aup.unit}{
+%   noigre,
+%   :N=\VERBX_if_signed:nNTF,
+% }
+% \VERBX_if_signed:nNTF { } { \AUPTEST: } {
+%   \VERBX_unit_set:n { ! }
+% } {
+%   \VERBX_unit_set:n { !! }
+% }
+% \VERBX_unit_should_match:nn { ! } { 1 }
+% \VERBX_if_signed:nNTF { } { \AUPTEST:n } {
+%   \VERBX_unit_set:n { ! }
+% } {
+%   \VERBX_unit_set:n { !! }
+% }
+% \VERBX_unit_should_equal:nn { !! } { 2 }
+% \VERBX_debug_if_signed:nNTF { n } { \AUPTEST:n } {
+%   \VERBX_unit_set:n { ! }
+% } {
+%   \VERBX_unit_set:n { !! }
+% }
+% \VERBX_unit_should_match:nn { ! } { 3 }
+% \VERBX_if_signed:nNTF { n } { \AUPTEST: } {
+%   \VERBX_unit_set:n { ! }
+% } {
+%   \VERBX_unit_set:n { !! }
+% }
+% \VERBX_unit_should_match:nn { !! } { 4 }
+% \end{aup.unit}
+% \end{verbxMacrocode}
+%^^A:◆ if_head_signed:nNTF
+% \begin{verbxMacrocode}
+%    \begin{macrocode}
+\exp_args:Nc \prg_new_conditional:Npnn { \VERBX_c:b { if_head_signed:nN } } #1 #2 { T, F, TF } {
+  \exp_args:Nx \str_if_in:nnTF {
+    ^^J
+    \exp_last_unbraced:Nf \use_ii:nnn {
+      \cs_split_function:N #2
+    }
+  } { ^^J #1 } {
+    \prg_return_true:
+% \end{verbxGobbleDebug}
+% \begin{aup.unit}{
+%   :N=\VERBX_if_head_signed:nNTF,
+%   profiles=AupTest,
+% }
+% \VERBX_if_head_signed:nNTF {} \AUPTEST_TEST:n {
+%   \VERBX_unit_set:n { ! }
+% } {}
+% \VERBX_unit_should_equal:nn { ! } { 1 }
+% \VERBX_if_head_signed:nNTF { n } \AUPTEST_TEST:n {
+%   \VERBX_unit_set:n { ! }
+% } {}
+% \VERBX_unit_should_equal:nn { ! } { 2 }
+% \VERBX_if_head_signed:nNTF { } \AUPTEST_TEST:n {
+%   \VERBX_unit_set:n { ! }
+% } {}
+% \VERBX_unit_should_equal:nn { ! } { 3 }
+% \VERBX_if_head_signed:nNTF { nn } \AUPTEST_TEST:nnn {
+%   \VERBX_unit_set:n { ! }
+% } {}
+% \VERBX_unit_should_equal:nn { ! } { 3 }
+% \end{aup.unit}
+%    \begin{macrocode}
+  } {
+    \prg_return_false:
+%    \end{macrocode}
+% \begin{aup.unit}{
+%   :N=\VERBX_if_head_signed:nNTF,
+%   profiles={AupTest},
+% }
+% \VERBX_if_head_signed:nNTF { n } \AUPTEST_TEST: {} {
+%   \VERBX_unit_set:n { !! }
+% }
+% \VERBX_unit_should_equal:nn { !! } { 1 }
+% \VERBX_if_head_signed:nNTF { nn } \AUPTEST_TEST:n {} {
+%   \VERBX_unit_set:n { !! }
+% }
+% \VERBX_unit_should_equal:nn { !! } { 2 }
+% \VERBX_if_head_signed:nNTF { nnn } \AUPTEST_TEST:nn {} {
+%   \VERBX_unit_set:n { !! }
+% }
+% \VERBX_unit_should_equal:nn { !! } { 3 }
+% \VERBX_if_head_signed:nNTF { Nn } \AUPTEST_TEST:n {} {
+%   \VERBX_unit_set:n { !! }
+% }
+% \VERBX_unit_should_equal:nn { !! } { 4 }
+% \end{aup.unit}
+%    \begin{macrocode}
+  }
+}
+%    \end{macrocode}
+% \end{verbxMacrocode}
+%
+% \subsubsection{General}
+% The current file, with an eventual path if available.
+%    \begin{macrocode}
+\VERBX_new:bpn { current_file: } {
+  \tl_if_empty:VF \CurrentFilePath { \CurrentFilePath / }
+  \CurrentFile
+}
+%    \end{macrocode}
+% \begin{aup.unit} {
+% 
+% }
+% \VERBX_unit_set:x { \CurrentFile }
+% \VERBX_unit_should_match:nn { dtx } {…}
+% \end{aup.unit}
+% \subsubsection{Include debug facilities}
+%    \begin{macrocode}
+%<*!final>
+\RequirePackage{aup-debug}
+%</!final>
+%    \end{macrocode}
+%
+% \begin{macro}{
+%   \VERBX_use_signed:FnN,
+%   \VERBX_use_signed:Fnc,
+%   \VERBX_use_head_signed:FnN,
+%   \VERBX_use_head_signed:Fnc,
+% }
+% In normal mode this expands to its last argument as function.
+% In debug mode, it first ensures that the signature of the last argument
+% is or starts with the second argument.
+% \begin{verbxMacrocode}
+%^^A:◆ use_signed:FnN
+%^^A:◆ use_head_signed:FnN
+%    \begin{macrocode}
+\cs_new_eq:NN \VERBX_use_signed:FnN \use_iii:nnn
+\cs_new_eq:NN \VERBX_use_head_signed:FnN \use_iii:nnn
+%    \end{macrocode}
+% In debug mode, the definition is
+% \begin{verbxGobbleDebug}
+%<*!final>
+% \end{verbxGobbleDebug}
+%^^A:◆ use_signed:FnN
+%    \begin{macrocode}
+\VERBX_new:bpn { use_signed:FnN } #1 #2 #3 {
+  \VERBX_debug_if_signed:nNTF { #2 } #3 { \VERBX_use:N #3 } { #1 }
+}
+%    \end{macrocode}
+%^^A:◆ use_head_signed:FnN
+%    \begin{macrocode}
+\VERBX_new:bpn { use_head_signed:FnN } #1 #2 #3 {
+  \VERBX_debug_if_head_signed:nNTF { #2 } #3 { \VERBX_use:N #3 } { #1 }
+}
+%    \end{macrocode}
+% \begin{verbxGobbleDebug}
+%</!final>
+% \end{verbxGobbleDebug}
+%
+% \begin{macro}{
+%   \VERBX_use:NN,
+%   \VERBX_use:Nc,
+%   \VERBX_use:cN,
+%   \VERBX_use:cc,
+%}
+% In debug mode, ensure that the first argument exists and has the proper signature
+% before usage.
+% \begin{verbxMacrocode}
+%^^A:◆ use:NN
+%    \begin{macrocode}
+\VERBX_new:bpn { use:NN } #1 #2 {
+  #1 #2
+}
+%    \end{macrocode}
+%    \begin{macrocode}
+\VERBX_generate_variant:bn { use:NN } { Nc, cN, cc }
+%    \end{macrocode}
+% \end{verbxMacrocode}
+% \end{macro}
+%
+%^^A:◆ use:nN
+% \begin{macro}{
+%   \VERBX_use:nN,
+%   \VERBX_use:nc,
+%   \VERBX_use:nb,
+%   \VERBX_use:nV,
+%}
+% \begin{verbxMacrocode}
+%    \begin{macrocode}
+\VERBX_new:bpn { use:nN } #1 #2 {
+%    \end{macrocode}
+% \begin{verbxGobbleDebug}
+%<*!final>
+\typeout{**********~\token_to_str:N~#2~EXIST?}
+  \cs_if_exist:NTF #2 {
+\typeout{**********~\token_to_str:N~#2~EXIST}
+%</!final>
+% \end{verbxGobbleDebug}
+%    \begin{macrocode}
+\typeout{**********~\token_to_str:N~#2~RUN}
+    #1 #2
+%    \end{macrocode}
+% \begin{verbxGobbleDebug}
+%<*!final>
+  } {
+\typeout{**********~\token_to_str:N~#2~UNEXIST}
+    \VERBX_fatal:x { Unknown~\token_to_str:N #2 }
+  }
+%</!final>
+% \end{verbxGobbleDebug}
+%    \begin{macrocode}
+}
+\show \VERBX_use:nN
+%    \end{macrocode}
+%    \begin{macrocode}
+\cs_generate_variant:Nn \VERBX_use:nN { nc }
+%    \end{macrocode}
+%    \begin{macrocode}
+\VERBX_new:bpn { use:nb } #1 #2 {
+  \exp_args:Nnc \VERBX_use:nN { #1 } { \VERBX_c:b { #2 } }
+}
+%    \end{macrocode}
+%    \begin{macrocode}
+\VERBX_new:bpn { use:nV } #1 #2 {
+%    \end{macrocode}
+% \begin{verbxGobbleDebug}
+%<*!final>
+  \cs_if_exist:NTF #2 {
+%</!final>
+% \end{verbxGobbleDebug}
+%    \begin{macrocode}
+    \exp_args:NnV \use:n { #1 } #2
+%    \end{macrocode}
+% \begin{verbxGobbleDebug}
+%<*!final>
+  } {
+    \VERBX_fatal:x { Unknown~variable~\token_to_str:N #2 }
+  }
+%</!final>
+% \end{verbxGobbleDebug}
+%    \begin{macrocode}
+}
+%    \end{macrocode}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\VERBX_use:nN{:nc/:nV},
+%   profiles=no_fatal,
+% }
+% \VERBX_use:nN {} \AUPTEST_
+% \VERBX_unit_should_match:nn { Unknown } { … }
+% \VERBX_use:nc {} { AUPTEST_ }
+% \VERBX_unit_should_match:nn { Unknown } { … }
+% \VERBX_use:nV {} \AUPTEST_
+% \VERBX_unit_should_match:nn { Unknown } { … }
+% \end{aup.unit}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\VERBX_use:nN{:nc/:nV},
+% }
+% \tl_set:Nn \l__AUP_unit_A_tl { ! }
+% \VERBX_use:nN { \VERBX_unit_set:V } \l__AUP_unit_A_tl
+% \VERBX_unit_should_equal:nn { ! } { 1 }
+% \tl_set:Nn \l__AUP_unit_A_tl { !! }
+% \VERBX_use:nc { \VERBX_unit_set:V } { l__AUP_unit_A_tl }
+% \VERBX_unit_should_equal:nn { !! } { 2 }
+% \tl_set:Nn \l__AUP_unit_A_tl { ! }
+% \VERBX_use:nV { \VERBX_unit_set:n } \l__AUP_unit_A_tl
+% \VERBX_unit_should_equal:nn { ! } { 3 }
+% \end{aup.unit}
+% \end{verbxMacrocode}
+% \begin{verbxMacrocode}
+% \end{macro}
+%
+% \begin{verbxGobbleDebug}
+%</core.sty>
+% \end{verbxGobbleDebug}
+%^^A:📄 core.sty:
+%
+% \subsection{Implementation of \pkg{aup-debug}}
+%
+%
+% \end{implementation}
+%
+% \StopEventually{
+%   \setlength\IndexMin{200pt}
+%   \PrintIndex
+% }
+%
+% \Finale
+%
+%
+%
+% \endinput
+%
+%^^A:❖❖❖❖❖❖❖❖❖❖
+% \begin{implementation}
+%
+%
+% \section{Implementation}
+%
+%
+%
+% Only available in debug mode, AUP->module.
+%    \begin{macrocode}
+%<*!final>
+%    \end{macrocode}
+% \begin{verbxGobbleDebug}
+%</!final>
+% \end{verbxGobbleDebug}
+%
+% \end{implementation}
+%
+% \StopEventually{\setlength\IndexMin{200pt}  \PrintIndex }
+%
+% \Finale
+%
+%
+% \endinput
+%
+%
+%
+% \begin{implementation}
+%
+%^^A:📄 main.sty
+% \begin{verbxGobbleDebug}
+%<*main.sty>
+% \end{verbxGobbleDebug}
+%
+%
+% \section{Implementation}
+%
+% 
+% Identify the internal prefix (\LaTeX3 \pkg{DocStrip} convention, unused).
+% \begin{verbxMacrocode}
+%    \begin{macrocode}
+%<@@=verbx>
+%    \end{macrocode}
+% \end{verbxMacrocode}
+% Reserved namespace:
+% identifiers containing the case insensitive string |verbx|
+% delimited by two non letter characters.
+%
+%
+%
+% \subsection{Implementation of \pkg{aup-debug}}
+%^^A:📄 debug.sty
+% \begin{aup.gobble.debug}
+%<*debug.sty>
+% \end{aup.gobble.debug}
+% \subsubsection{Package declarations}
+% \begin{aup.macrocode}
+%    \begin{macrocode}
+\NeedsTeXFormat{LaTeX2e}[2023/01/07]
+\ProvidesExplPackage
+  {aup-debug}
+  {2023/01/07}
+  {1.0}
+  {A utility package (for beanoves)}
+\RequirePackage{aup-core__debug}
+\debug_on:n {check-declarations}
+%    \end{macrocode}
+% \end{aup.macrocode}
+%
+% \begin{macro}{
+%   \AupDebugOn,
+%   \AupDebugOff,
+% }
+% These macros do nothing in normal mode
+%^^A:◆ \AupDebugOn
+%    \begin{macrocode}
+\hook_new:n { AupDebugOn }
+\NewDocumentCommand \AupDebugOn {} {
+  \hook_use:n { AupDebugOn }
+}
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+\hook_gput_code:nnn { AUP/1:b/kit_msg:m } { AupDebugOn } {
+  \tl_put_left:Nn \AupDebugOn {
+    \AUP_term:x { *****~Aup~debug~On~(\AUP_current_file: @ \the\inputlineno) }
+  }
+  \hook_gremove_code:nn { AUP/1:b/kit_msg:m } { AupDebugOn }
+}
+%</!final>
+% \end{aup.gobble.debug}
+%^^A:◆ \AupDebugOn
+%    \begin{macrocode}
+\hook_new:n { AupDebugOff }
+\NewDocumentCommand \AupDebugOff {} {
+  \hook_use:n { AupDebugOff }
+}
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+\hook_gput_code:nnn { AUP/1:b/kit_msg:m } { AupDebugOff } {
+  \tl_put_left:Nn \AupDebugOn {
+    \AUP_term:x { *****~Aup~debug~Off~(\AUP_current_file: @ \the\inputlineno) }
+  }
+  \hook_gremove_code:nn { AUP/1:b/kit_msg:m } { AupDebugOff }
+}
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+\AtBeginDocument{\AupDebugOff}
+%    \end{macrocode}
+% \end{macro}
+%
+% Next are undocumented helper functions.
+%    \begin{macrocode}
+\int_zero_new:N \l__AUP_debug_group_int
+\cs_new:Npn \AUP__debug:n #1 {
+  \exp_args:Nnnx
+  \msg_term:nnn { aup } { :n } {
+    ▃▃
+    \prg_replicate:nn { \l__AUP_debug_group_int } {▁▃}
+    \space
+    \exp_not:n { #1 }
+  }
+}
+\AUP_generate_variant:bn { _debug:n } { o, x }
+%    \end{macrocode}
+%^^A:◆ debug:n
+% \begin{macro} {
+%   \AUP_debug:n,
+%   \AUP_debug:o,
+%   \AUP_debug:x,
+% }
+% Logging arguments, only in debug mode.
+%    \begin{macrocode}
+\hook_gput_code:nnn {AupDebugOn} { aup } {
+  \cs_set_eq:NN \AUP_debug:n \AUP__debug:n
+  \AUP_generate_variant:bn { debug:n } { o, x }
+}
+\hook_gput_code:nnn {AupDebugOff} { aup } {
+  \cs_set_eq:NN \AUP_debug:n \use_none:n
+}
+\AupDebugOff
+\AUP_generate_variant:bn { debug:n } { o, x }
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{
+%   \AUP_debug_f:N,
+% \end{macro}
+%^^A:◆ debug_f:N
+%    \begin{macrocode}
+\AUP_new:bpn { debug_f:N } #1 {
+  \AUP_debug:x { ⚑~\token_to_str:N #1 ▬▶︎}
+}
+\AUP_generate_variant:bn { debug_f:N } { c }
+\hook_gput_code:nnn { AUP/1/module } { debug } {
+  \AUP_new:bpn { debug_f:mb } #1 #2 {
+    \AUP_debug_ensure_registered:mT { #1 } {
+      \AUP_debug_f:c { \AUP_c:mb { #1 } { #2 } }
+    }
+  }
+}
+%    \end{macrocode}
+% \end{macro}
+%
+% \subsubsection{Other debug mode}
+%
+% Next are undocumented public functions.
+% \begin{macro} {
+%   \AUP_debug:N,
+%   \AUP_debug:c,
+%   \AUP_debug:V,
+%   \AUP_debug:b,
+%   \AUP_debug:t,
+%   \AUP_debug:i,
+%   \AUP_debug:B,
+% }
+% Logging objects, only in debug mode.
+% \begin{aup.macrocode}
+%^^A:◆ debug:N
+%    \begin{macrocode}
+\AUP_new:bpn { debug:N } #1 {
+  \AUP_debug:n { N -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:c
+%    \begin{macrocode}
+\AUP_new:bpn { debug:c } #1 {
+  \AUP_debug:n { c -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:b
+%    \begin{macrocode}
+\AUP_new:bpn { debug:b } #1 {
+  \AUP_debug:n { b -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:t
+%    \begin{macrocode}
+\AUP_new:bpn { debug:t } #1 {
+  \AUP_debug:n { t -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug:i } #1 {
+  \AUP_debug:n { i -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:B
+%    \begin{macrocode}
+\AUP_new:bpn { debug:B } #1 {
+  \AUP_debug:n { B -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:V
+%    \begin{macrocode}
+\AUP_new:bpn { debug:V } #1 {
+  \AUP_debug:n { V -> #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:K
+%    \begin{macrocode}
+\AUP_new:bpn { debug:K } #1 {
+  \AUP_debug:n { K -> #1 }
+}
+%    \end{macrocode}
+% \end{aup.macrocode}
+% \end{macro}
+%
+% \begin{macro} {
+%   \AUP_debug_new:N,
+%   \AUP_debug_new:c,
+%   \AUP_debug_new:b,
+% }
+% Message logger for macro creation.
+%^^A:◆ debug_new:N
+%    \begin{macrocode}
+\AUP_new:bpn { debug_new:N } #1 {
+  \AUP_debug:x { New ▬▶︎ /\token_to_str:N #1/ }
+}
+%    \end{macrocode}
+%^^A:◆ debug_new:c
+%    \begin{macrocode}
+\AUP_generate_variant:bn { debug_new:N } { c }
+%    \end{macrocode}
+%^^A:◆ debug_new:b
+%    \begin{macrocode}
+\AUP_new:bpn { debug_new:b } #1 {
+  \AUP_debug_new:c { \AUP_c:b { #1 } }
+}
+\hook_gput_code:nnn { AUP/1/module } { debug } {
+%    \end{macrocode}
+%^^A:◆ debug_new:mb
+%    \begin{macrocode}
+  \AUP_new:bpn { debug_new:mb } #1 #2 {
+    \AUP_debug_ensure_registered:mT { #1 } {
+      \AUP_debug_new:c { \AUP_c:mb { #1 } { #2 } }
+    }
+  }
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro} {
+%   \AUP_debug_undefine:N,
+%   \AUP_debug_undefine:c,
+%   \AUP_debug_undefine:b,
+%   \AUP_debug_undefine:mb,
+% }
+% Message logger for macro deletion.
+% \begin{aup.macrocode}
+%^^A:◆ debug_undefine:N
+%    \begin{macrocode}
+\AUP_new:bpn { debug_undefine:N } #1 {
+  \AUP_debug:n { Undefine ▬▶︎ #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug_undefine:c
+%    \begin{macrocode}
+\cs_generate_variant:Nn \AUP_debug_undefine:N { c }
+%    \end{macrocode}
+%^^A:◆ debug_undefine:b
+%    \begin{macrocode}
+\AUP_new:bpn { debug_undefine:b } #1 {
+  \AUP_debug_undefine:c { \AUP_c:b { #1 } }
+}
+\hook_gput_code:nnn { AUP/1/module } { debug } {
+%    \end{macrocode}
+%^^A:◆ debug_undefine:mb
+%    \begin{macrocode}
+  \AUP_new:bpn { debug_undefine:mb } #1 #2 {
+    \AUP_debug_ensure_registered:mT { #1 } {
+      \AUP_debug_undefine:c { \AUP_c:mb { #1 } { #2 } }
+    }
+  }
+}
+%    \end{macrocode}
+% \end{aup.macrocode}
+% \end{macro}
+%
+% \begin{macro} {
+%   \AUP_debug_seq:N,
+%   \AUP_debug_seq:nN,
+%   \AUP_debug:V,
+%   \AUP_debug:b,
+%   \AUP_debug:t,
+%   \AUP_debug:i,
+%   \AUP_debug:B,
+%   \AUP_debug:K,
+% }
+% Sequence support.
+% \begin{aup.macrocode}
+%^^A:◆ debug_seq:N
+%    \begin{macrocode}
+\AUP_new:bpn { debug_seq:N } #1 {
+  \AUP_debug:x {
+    \token_to_str:N #1 ▬▶︎ / \seq_count:N #1 / \seq_use:Nn #1 ◆ /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_seq:nN
+%    \begin{macrocode}
+\AUP_new:bpn { debug_seq:nN } #1 #2 {
+  \AUP_debug:x {
+    \tl_to_str:n { #1 } ▬▶︎ / \seq_count:N #2 / \seq_use:Nn #2 ◆ /
+  }
+}
+%    \end{macrocode}
+% \AupUnitSetupPut{*}{AupSeq}{seq_new}{
+% 
+% }
+% \begin{aup.unit} {
+%   profiles=AupSeq,
+% }
+% \cs_set_eq:NN \AUP__debug:x \AUP_unit_set:x
+% 
+% \end{aup.unit}
+%    \begin{macrocode}
+\hook_gput_code:nnn { AUP/1/module } { seq } {
+  \AUP_new:bpn { debug_seq:mni } #1 #2 #3 {
+    \AUP__debug:x {
+      \tl_to_str:n { #2 }
+      ▬▶︎ / \seq_count:c { \AUP_c:mKti { #1 } l { seq } { #3 } }
+         / \seq_use:cn  { \AUP_c:mKti { #1 } l { seq } { #3 } } ◆ /
+    }
+  }
+}
+%    \end{macrocode}
+% \begin{aup.macrocode}
+% \end{macro}
+%
+% Only available in debug mode.
+% \begin{macro}{
+%   \AUP_debug_f:Nn,
+%   \AUP_debug_f:cn,
+%   \AUP_debug_f:bn,
+%   \AUP_debug_f:mbn,
+% }
+% Messaging during function execution.
+% This is not 100\%\ accurate because there is no calling stack in \TeX.
+%^^A:◼︎ debug_f:Nn
+%    \begin{macrocode}
+\AUP_new:bpn { debug_f:Nn } #1 #2 {
+%    \end{macrocode}
+%^^A:◼︎◼︎ debug_f_⟨…⟩:nn
+%    \begin{macrocode}
+  \AUP_set:bpn { debug_f_\cs_to_str:N #1 :nn } ##1 ##2 {
+    \AUP_debug:x {
+      \tl_if_empty:nTF { ##1 } { … } { \tl_to_str:n { ##1 } }
+      ▬▬▶︎\token_to_str:N #2▬▬▶︎
+      \tl_if_empty:nTF { ##2 } { … } { \tl_to_str:n { ##2 } }
+    }
+  }
+  \AUP_debug:x {
+    ⚑~\token_to_str:N #2▬▬▶︎
+    \tl_if_empty:nTF { ##2 } { … } { \tl_to_str:n { ##2 } }
+  }
+}
+%    \end{macrocode}
+%^^A:◼︎ debug_f:cn
+%    \begin{macrocode}
+\cs_generate_variant:Nn \AUP_debug_f:Nn { c }
+%    \end{macrocode}
+%^^A:◼︎ debug_f:bn
+%    \begin{macrocode}
+\AUP_new:bpn { debug_f:bn } #1 {
+  \AUP_debug_f:cn { AUP_#1 }
+}
+%    \end{macrocode}
+%^^A:◼︎ debug_f:mbn
+%    \begin{macrocode}
+\AUP_new:bpn { debug_f:mbn } #1 #2 {
+  \AUP_debug_f:cn { \AUP_c:mb { #1 } { #2 } }
+}
+%    \end{macrocode}
+%^^A:◆ debug___kv:nn
+%    \begin{macrocode}
+\tl_new:N \l__AUP_debug_tl
+\AUP_new:bpn { debug___kv:nn } #1 #2 {
+  \AUP_extract_once:nnTF {
+    ([^.:]*)([.:].*)
+  } { #1 } {
+    \str_case:nnF { ##2 } {
+      { :N } {
+        \exp_args:Nx \AUP_debug:x {
+          \tl_to_str:n { ##1 } -> / \token_to_str:N #2 /
+        }
+      }
+    } {
+      \AUP_debug:x {
+        \tl_to_str:n { ##1 } -> / \tl_to_str:n { #2 } /
+      }
+    }
+  } {
+    \AUP_debug:x {
+      \tl_to_str:n { #1 } -> / \tl_to_str:n { #2 } /
+    }
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_kv:n
+%    \begin{macrocode}
+\AUP_new:bpn { debug_kv:n } {
+  \keyval_parse:NNn
+    \AUP_debug___kv:n
+    \AUP_debug___kv:nn
+}
+%    \end{macrocode}
+%^^A:◆ debug_args_set:Nn
+%    \begin{macrocode}
+\AUP_new:bpn { debug_args_set:Nn } #1 #2 {
+  \cs_if_exist:cT { AUP_debug_f_\cs_to_str:N #1 :nn } {
+    \tl_put_right:cn { AUP_debug_f_\cs_to_str:N #1 :nn } {
+      \AUP_debug_kv:n { #2 }
+    }
+  }
+}
+%    \end{macrocode}
+% \end{macro}
+%^^A:◼︎ debug___kv:mnn
+%    \begin{macrocode}
+\tl_new:N \l__AUP_debug_after_tl
+\AUP_new:bpn { debug___kv:mnn } #1 #2 #3 {
+  \AUP_extract_once:nnTF { ([^.:]*)(?:(:[^.].*)(?:[.]([cglr]))?)? } { #2 } {
+%    \end{macrocode}
+% Captured groups for the value:
+% \begin{itemize}
+% \item[\#\#1] no |.| nor |:| for a variable name
+% \item[\#\#2] the type
+% \item[\#\#3] the specifier
+% \end{itemize}
+%    \begin{macrocode}
+    \str_case:nnF { ##2 } {
+      { :seq } {
+        \tl_set:Nx \l__AUP_tl { ##1 }
+        \tl_if_empty:nTF { ##1 } {
+          \AUP_debug:x {
+            #2 -> / \seq_use:cn {
+              \AUP_c:mKti { #1 } {
+                \tl_if_empty:nTF { ##3 } { l } { ##3 }
+              } { seq } { #3 }
+            } . /
+          }
+        } {
+          \AUP_debug:x {
+            { ##1 } -> / \seq_use:cn {
+              \AUP_c:mKti { #1 } {
+                \tl_if_empty:nTF { ##3 } { l } { ##3 }
+              } { seq } { #3 }
+            } . /
+          }
+        }        
+      }
+      { :prop } {
+        \AUP_debug:x {
+          \tl_to_str:n { ##1 } -> / \tl_to_str:n { #3 } /
+        }
+      }
+      { :after } {
+        \tl_set:N \l__AUP_debug_after_tl { #3 }
+      }
+      { :N } {
+        \AUP_debug:x { \tl_to_str:n { ##1 } -> / \token_to_str:n { #3 } / }
+      }
+      { :V } {
+        \AUP_debug:x {
+          \tl_to_str:n { ##1 } -> / \token_to_str:N ##2 / -> / \tl_to_str:V #3 /
+        }
+      }
+    } {
+      \AUP_debug:x { \tl_to_str:n { ##1 } -> / \tl_to_str:n { #3 } / }
+    }
+  } {
+    \AUP_debug:x { \tl_to_str:n { ##1 } -> / \tl_to_str:n { #3 } / }
+  }
+}
+%    \end{macrocode}
+%^^A:◼︎ debug_f_args:Nnn
+%    \begin{macrocode}
+\AUP_new:bpn { debug_f_args:Nnn } #1 #2 #3 {
+  \AUP_debug_f:Nn #1 { #2 }
+  \AUP_debug_args_set:bn #1 { #3 }
+  \AUP_debug_kv:n { #3 }
+}
+%    \end{macrocode}
+% \begin{macro}{
+%   \AUP_debug_kit:m,
+% }
+% Provides debugging facilities within a module namespace.
+% The first argument is the module name, the second one is the used module name,
+% in general the uppercase module name.
+%^^A:◆ debug_kit:m
+%    \begin{macrocode}
+\AUP_new:bpn { debug_kit:m } #1 {
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+  \bool_if:nTF {
+    \str_if_eq_p:nn { #1 } { aup }
+  } {
+    \AUP_fatal:n { Unsupported~#1 }
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_debug_kit:m{:fatal/1},
+%   profiles=no_fatal,
+% }
+% \AUP_debug_kit:m { aup } { ? }
+% \AUP_unit_should_match:nn { Unsupported } { N }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}    
+  } {
+    \cs_if_exist_use:NTF \AUP_debug_ensure_registered:mTF { #1 } { \use:n } {
+%</!final>
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_debug_kit:m{fatal/2},
+%   profiles=no_fatal,
+% }
+% \AUP_debug_kit:m { AupTest }
+% \AUP_unit_should_match:nn { AUP_register:mM } { N }
+% \end{aup.unit}
+%^^A:◼︎ <…>_debug_f:bn
+%    \begin{macrocode}
+  \AUP_wrap:mN { #1 } \AUP_debug_f:mbn
+%    \end{macrocode}
+% \begin{aup.unit}{
+%   :Nn=\AUP_debug_kit:m{fatal/2},
+%   profiles=AupTest,
+%   debug,
+% }
+% \tracingall
+% \AUP_debug_kit:m { AupTest }
+% \AUPTEST_debug_f:bn { bar: } { baz }
+% \end{aup.unit}
+%
+%
+%^^A:◆ <…>_debug_kv:n
+%    \begin{macrocode}
+  \AUP_wrap:mN { #1 } \AUP_debug___kv:mnn
+  \AUP_new:mbpn { #1 } { debug_kv:n } ##1 {
+    \tl_clear:N \l__AUP_debug_after_tl
+    \exp_args:NNc
+    \keyval_parse:NNn
+      \AUP_debug:n
+      { \AUP_c:mb { #1 } { debug___kv:nn } }
+      { ##1 }
+      \l__AUP_debug_after_tl
+  }
+  \AUP_new:mbpn { #1 } { debug_args_set:Nn } ##1 ##2 {
+    \cs_if_exist:cT { \AUP_c:mb { #1 } { debug_f_\cs_to_str:N ##1 :nn } } {
+      \tl_put_right:cn { \AUP_c:mb { #1 } { debug_f_\cs_to_str:N ##1 :nn } } {
+        \AUP_use:mb { #1 } { debug_kv:n } { ##2 }
+      }
+    }
+  }
+  \AUP_generate_variant:mbn { #1 } { debug_args_set:Nn } { c }
+  \AUP_new:mbpn { #1 } { debug_args_set:bn } ##1 {
+    \AUP_use:mb { #1 } { debug_args_set:cn } { \AUP_c:mb { #1 } { ##1 } }
+  }
+  \AUP_new:mbpn { #1 } { debug_f_args:bnn } ##1 ##2 ##3 {
+    \AUP_use:mb { #1 } { debug_f:bn } { ##1 } { ##2 }
+    \AUP_use:mb { #1 } { debug_args_set:bn } { ##1 } { ##3 }
+    \AUP_use:mb { #1 } { debug_kv:n } { ##3 }
+  }
+
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+    }
+  }
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+}
+%    \end{macrocode}
+% \end{macro}
+%    \begin{macrocode}
+\AUP_new:bpn { debug_args_set:bn } #1 #2 {
+  \AUP_set:bpn { debug_current:nn } ##1 ##2 {
+    \AUP_debug_f:nbn { ##1 } { #1 } { ##2 }
+    #2
+  }
+  \AUP_debug_current:b { #1 }
+}
+%    \end{macrocode}
+%^^A:◆ debug:mKti
+%    \begin{macrocode}
+\AUP_new:bpn { debug:mKti } #1 #2 #3 #4 {
+  \AUP__debug:x {
+    \AUP_use_N:mNKti \token_to_str:N #1 { #2 } { #3 } { #4 }
+    -> / \AUP_use_n:mNKti \tl_to_str:n #1 { #2 } { #3 } { #4 } /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_tl:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug_tl:i } #1 {
+  \AUP__debug:x {
+    \AUP_tl_use_N:Ni \token_to_str:N { #1 }
+    -> / \AUP_tl_use_n:Ni \tl_to_str:n { #1 } /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_tl:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug_int:i } #1 {
+  \AUP__debug:x {
+    \AUP_int_use_N:Ni \token_to_str:N { #1 }
+    -> / \AUP_int_use_N:Ni \tl_to_str:n { #1 } /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_tl:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug_tl:ni } #1 #2 {
+  \AUP__debug:x {
+    \tl_if_empty:nF { #1 } { #1 -> }
+    \AUP_tl_use:Ni \token_to_str:N  { #2 }
+    -> / \AUP_tl_use:Ni \tl_to_str:n { #2 } /
+  }
+}
+\cs_generate_variant:Nn \tl_to_str:n { x }
+%    \end{macrocode}
+%^^A:◆ debug_tl:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug_seq:xi } #1 #2 {
+  \AUP__debug:x {
+    #1
+    ▬▶︎ / \seq_count:c { \AUP_c:mKti { aup } l { seq } { #2 } }
+       / \seq_use:cn { l__AUP_#2_seq } . /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_tl:i
+%    \begin{macrocode}
+\AUP_new:bpn { debug_seq:i } #1 {
+  \AUP__debug:x {
+    \token_to_str:c { l__AUP_#1_seq }
+    ▬▶︎ / \seq_count:c { l__AUP_#1_seq }
+       / \seq_use:cn { l__AUP_#1_seq } . /
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_require:N
+%    \begin{macrocode}
+\seq_new:N \g__AUP_debug_required_seq
+\AUP_new:bpn { debug_require:N } #1 {
+  \cs_if_exist:NF #1 {
+    \AUP_debug:x { No~\token_to_str:N #1~available }
+    \seq_gpush:Nn \g__AUP_debug_required_seq { #1 }
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_require:NT
+%    \begin{macrocode}
+\AUP_new:bpn { debug_require:NT } #1 #2 {
+  \cs_if_exist:NTF #1 { #2 } {
+    \AUP_debug:x { No~\token_to_str:N #1~available }
+    \seq_gpush:Nn \g__AUP_debug_required_seq { #1 }
+  }
+}
+%    \end{macrocode}
+%^^A:◆ debug_require:NTF
+%    \begin{macrocode}
+\AUP_new:bpn { debug_require:NTF } #1 #2 #3 {
+  \cs_if_exist:NTF #1 { #2 } {
+    \AUP_fatal:n { No~\token_to_str:N #1~available }
+    #3
+  }
+}
+\hook_gput_code:nnn { AUP/1:b/generate_c_b:mb } { . } {
+  \AUP_generate_c_b:mb { aup } { debug_require:N }
+}
+\hook_gput_code:nnn { AUP/1:b/generate_c_mb:N } { . } {
+  \AUP_generate_c_mb:N \AUP_debug_require:NTF
+}
+%    \end{macrocode}
+%
+% \subsubsection{Signed functions}
+% Utility functions available only on debugging.
+% \begin{function}{
+%   \AUP_debug_if_signed:nNTF,
+%   \AUP_debug_if_signed:ncTF,
+%   \AUP_debug_if_head_signed:nNTF,
+%   \AUP_debug_if_head_signed:ncTF,
+% }
+% \begin{syntax}
+% \cs{AUP_debug_if_signed:nNTF} \marg{signature} \meta{function} \marg{true code} \marg{false code}
+% \cs{AUP_debug_if_head_signed:nNTF} \marg{signature} \meta{function} \marg{true code} \marg {false code}
+% \end{syntax}
+% Execute \marg {true code} if the signature of \meta{function} is exactly \meta{signature},
+% otherwise if raises and execute \marg {false code} when the raise is catched.
+% In the |head| variants, only the start of the signature is tested.
+% \end{function}
+% \begin{aup.gobble.debug}
+%^^A:◆ debug_if_signed:nNTF
+%<*!final>
+\AUP_new:bpn { debug_if_signed:nNTF } #1 #2 #3 #4 {
+  \AUP_if_signed:nNTF { #1 } #2 { #3 } {
+    \AUP_fatal:x {
+      \token_to_str:N #2~signature~should~be~`#1'~instead~of~
+      `\exp_last_unbraced:Nf \use_ii:nnn { \cs_split_function:N #2 }'
+    }
+    #4
+  }
+}
+%</!final>
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :N=\AUP_debug_if_signed:nNTF,
+%   profiles=no_fatal,
+% }
+% \AUP_debug_if_signed:nNTF { } { \AUPTEST: } {
+%   \AUP_unit_set:n { ! }
+% } {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_match:nn { ! } { 1 }
+% \AUP_debug_if_signed:nNTF { } { \AUPTEST:n } {
+%   \AUP_unit_set:n { ! }
+% } {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_equal:nn { !! } { 2 }
+% \AUP_debug_if_signed:nNTF { n } { \AUPTEST:n } {
+%   \AUP_unit_set:n { ! }
+% } {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_match:nn { ! } { 3 }
+% \AUP_debug_if_signed:nNTF { n } { \AUPTEST: } {
+%   \AUP_unit_set:n { ! }
+% } {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_match:nn { !! } { 4 }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+%^^A:◆ debug_if_signed:ncTF
+%    \begin{macrocode}
+%<*!final>
+\AUP_new:bpn { debug_if_signed:ncTF } #1 #2 #3 #4 {
+  \exp_args:Nnc \AUP_debug_if_signed:nNTF { #1 } { #2 } { #3 } { #4 }
+}
+%    \end{macrocode}
+%^^A:◆ debug_if_head_signed:nNTF
+%    \begin{macrocode}
+\cs_new:Npn \AUP_debug_if_head_signed:nNTF #1 #2 #3 #4 {
+  \AUP_if_head_signed:nNTF { #1 } #2 {
+    #3
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   :N=\AUP_debug_if_head_signed:nNTF,
+%   profiles=AupTest,
+% }
+% \AUP_debug_if_head_signed:nNTF {} \AUPTEST_TEST:n {
+%   \AUP_unit_set:n { ! }
+% } {}
+% \AUP_unit_should_equal:nn { ! } { 1 }
+% \AUP_debug_if_head_signed:nNTF { n } \AUPTEST_TEST:n {
+%   \AUP_unit_set:n { ! }
+% } {}
+% \AUP_unit_should_equal:nn { ! } { 2 }
+% \AUP_debug_if_head_signed:nNTF { } \AUPTEST_TEST:n {
+%   \AUP_unit_set:n { ! }
+% } {}
+% \AUP_unit_should_equal:nn { ! } { 3 }
+% \AUP_debug_if_head_signed:nNTF { nn } \AUPTEST_TEST:nnn {
+%   \AUP_unit_set:n { ! }
+% } {}
+% \AUP_unit_should_equal:nn { ! } { 3 }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+  } {
+    \AUP_fatal:x {
+      \token_to_str:N #2 ~signature~should~start~with~`#1'~instead~of~
+      `\exp_last_unbraced:Nf \use_ii:nnn { \cs_split_function:N #2 }' 
+    }
+    #4
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   :N=\AUP_debug_if_head_signed:nNTF,
+%   profiles={AupTest,no_fatal},
+% }
+% \AUP_debug_if_head_signed:nNTF { n } \AUPTEST_TEST: {} {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_equal:nn { !! } { 1 }
+% \AUP_debug_if_head_signed:nNTF { nn } \AUPTEST_TEST:n {} {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_equal:nn { !! } { 2 }
+% \AUP_debug_if_head_signed:nNTF { nnn } \AUPTEST_TEST:nn {} {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_equal:nn { !! } { 3 }
+% \AUP_debug_if_head_signed:nNTF { Nn } \AUPTEST_TEST:n {} {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_unit_should_equal:nn { !! } { 4 }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+  }
+}
+%</!final>
+%    \end{macrocode}
+% \end{aup.gobble.debug}
+% \begin{aup.gobble.debug}
+%^^A:◆ debug_if_head_signed:ncTF
+%    \begin{macrocode}
+\AUP_gset:bpn { debug_if_head_signed:ncTF } #1 #2 {
+  \exp_args:Nnc \AUP_debug_if_head_signed:nNTF { #1 } { #2 }
+}
+%    \end{macrocode}
+% \end{aup.gobble.debug}
+%
+% \begin{aup.gobble.debug}
+% \end{aup.gobble.debug}
+%^^A:◆ use_signed:FnN+debug
+%    \begin{macrocode}
+\AUP_gset:bpn { use_signed:FnN } #1 #2 #3 {
+  \AUP_debug_if_signed:nNTF { #2 } #3 {} { #1 }
+}
+%    \end{macrocode}
+%^^A:◆ use_head_signed:FnN+debug
+%    \begin{macrocode}
+\AUP_gset:bpn { use_head_signed:FnN } #1 #2 #3 {
+  \AUP_debug_if_head_signed:nNTF { #2 } #3 {} { #1 }
+}
+%    \end{macrocode}
+% \end{aup.macrocode}
+% \end{macro}
+% \begin{aup.unit}{
+%   noigre,
+%   :N=\AUP_use_signed:Fnc,
+%   profiles=no_fatal,
+% }
+% \AUP_use_signed:Fnc {} {} { AUPTEST:n }
+% \AUP_unit_should_match:nn { signature } { 1 }
+% \AUP_use_signed:Fnc {} { n } { AUPTEST: }
+% \AUP_unit_should_match:nn { signature } { 2 }
+% \cs_new:Npn \AUPTEST:n #1 {
+%   \AUP_unit_set:n { #1 }
+% }
+% \AUP_use_signed:Fnc {
+%   \AUP_unit_set:n { ! }
+%   \use_none:n
+% } { } { AUPTEST:n } { !! }
+% \AUP_unit_should_equal:nn { ! } { 3 }
+% \cs_new:Npn \AUPTEST: {
+%   \AUP_unit_set:n { !! }
+% }
+% \AUP_use_signed:Fnc {
+%   \AUP_unit_set:n { ! }
+% } { n } { AUPTEST: }
+% \AUP_unit_should_equal:nn { ! } { 4 }
+% \AUP_use_signed:Fnc {
+%   \AUP_unit_set:n { ! }
+%   \use_none:n
+% } { n } { AUPTEST:n } { !! }
+% \AUP_unit_should_equal:nn { !! } { 5 }
+% \AUP_use_signed:Fnc {
+%   \AUP_unit_set:n { ! }
+% } {  } { AUPTEST: }
+% \AUP_unit_should_equal:nn { !! } { 6 }
+% \cs_undefine:N \AUPTEST:
+% \cs_undefine:N \AUPTEST:n
+% \end{aup.unit}
+%^^A:◆ use_head_signed:Fnc
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use_signed:FnN{:c/Fail},
+%   profiles={AupTest, no_fatal},
+% }
+% \AUP_use_signed:FnN { \AUP_unit_set:n { !  } } { x } \foo:N
+% \AUP_unit_should_equal:nn { ! } { 1 }
+% \AUP_use_signed:Fnc { \AUP_unit_set:n { !  } } { x } { foo:N }
+% \AUP_unit_should_equal:nn { ! } { 2 }
+% \AUP_use_signed:FnN { \AUP_unit_set:n { !! } } { x } \foo:x
+% \AUP_unit_should_match:nn { No~ } { 3 }
+% \AUP_use_signed:Fnc { \AUP_unit_set:n { !! } } { x } { foo:x }
+% \AUP_unit_should_match:nn { No~ } { 4 }
+% \end{aup.unit}
+%
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use_signed:FnN{:c},
+%   profiles=AupTest,
+% }
+% \cs_new:Npn \AUPTEST: { \AUP_unit_set:n { ! } }
+% \AUP_use_signed:FnN { \AUP_unit_set:n { !! } } { } \AUPTEST:
+% \AUP_unit_should_equal:nn { ! } { … }
+% \AUP_use_signed:Fnc { \AUP_unit_set:n { !! } } { } { AUPTEST: }
+% \AUP_unit_should_equal:nn { ! } { … }
+% \cs_new:Npn \AUPTEST:n #1 { \AUP_unit_set:n { #1 } }
+% \AUP_use_signed:FnN { \AUP_unit_set:n { !! } } { n } \AUPTEST:n { ! }
+% \AUP_unit_should_equal:nn { ! } { … }
+% \AUP_use_signed:Fnc { \AUP_unit_set:n { !! } } { n } { AUPTEST:n } { ! }
+% \AUP_unit_should_equal:nn { ! } { … }
+% \end{aup.unit}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use_head_signed:FnN{Fail},
+%   profiles={AupTest, no_fatal},
+% }
+% \AUP_use_head_signed:FnN {} { xV } \foo:xnN
+% \AUP_unit_should_match:nn { signature.should.start } { 1 }
+% \AUP_use_head_signed:FnN {} { nn } \foo:nnNN
+% \AUP_unit_should_match:nn { No.*available } { 2 }
+% \AUP_use_head_signed:FnN { \AUP_unit_set:n { !  } } { xV } \foo:xnN
+% \AUP_unit_should_equal:nn { !  } { 3 }
+% \AUP_use_head_signed:FnN { \AUP_unit_set:n { !! } } { nn } \foo:nnNN
+% \AUP_unit_should_match:nn { No.*available } { 4 }
+% \end{aup.unit}
+% \begin{aup.unit}{
+%   noigre,
+%   :N=\AUP_use_head_signed:FnN,
+%   profiles=AupTest,
+% }
+% \cs_new:Npn \AUPTEST:n #1 { \AUP_unit_set:n { #1 } }
+% \AUP_use_head_signed:FnN { \AUP_unit_set:n { !! } } { n } \AUPTEST:n { ! }
+% \AUP_unit_should_equal:nn { ! } { 1 }
+% \cs_new:Npn \AUPTEST:nn #1 #2 { \AUP_unit_set:n { #1 #2 } }
+% \AUP_use_head_signed:FnN { \AUP_unit_set:n { ! } } { n } \AUPTEST:nn { ! } { ! }
+% \AUP_unit_should_equal:nn { !! } { 2 }
+% \end{aup.unit}
+%
+% \begin{macro}{
+%   \AUP_use:NN,
+%   \AUP_use:Nc,
+%   \AUP_use:cN,
+%   \AUP_use:cc,
+%}
+% In debug mode, ensure that the first argument exists and has the proper signature
+% before usage.
+% \begin{aup.macrocode}
+%^^A:◆ use:N+debug
+%    \begin{macrocode}
+\AUP_gset:bpn { use:N } #1 {
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+\AUP_debug_kv:n {
+  N:N = #1,
+}
+  \cs_if_exist:NTF #1 {
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+  #1
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+    } {
+    \AUP_fatal:x { Unknown~command~\token_to_str:N #1~(N) }
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use:N{:c},
+%   profiles=no_fatal,
+% }
+% \AUP_should_unexist:nNn { cs } \AUPTEST: { 0 }
+% \AUP_use:N \AUPTEST:
+% \AUP_unit_should_match:nn { AUPTEST: } { 1 }
+% \AUP_use:c { AUPTEST:: }
+% \AUP_unit_should_match:nn { AUPTEST: } { 2 }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+  }
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+}
+%    \end{macrocode}
+% \end{aup.macrocode}
+% \end{macro}
+%
+% \begin{macro}{
+%   \AUP_use:NN,
+%   \AUP_use:Nc,
+%   \AUP_use:cN,
+%   \AUP_use:cc,
+%}
+% In debug mode, ensure that the first argument exists and has the proper signature
+% before usage.
+% \begin{aup.macrocode}
+%^^A:◆ use:NN+debug
+%    \begin{macrocode}
+\AUP_gset:bpn { use:NN } #1 #2 {
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+\AUP_debug_kv:n {
+  1:N = #1,
+  2:N = #2,
+}
+  \cs_if_exist:NTF #1 {
+\AUP_debug:n { *****~A }
+    \AUP_debug_if_head_signed:nNTF N #1 {
+\AUP_debug:n { *****~B }
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+  #1 #2
+%    \end{macrocode}
+% \begin{aup.gobble.debug}
+%<*!final>
+    } {
+\AUP_debug:n { *****~C }
+      \AUP_debug_if_head_signed:nNTF V #1 {
+\AUP_debug:n { *****~D }
+        #1 #2
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use:NN{:c/Fail_1},
+%   profiles={AupTest,AupType,no_fatal},
+% }
+% \cs_new:Npn \AUPTEST_TEST:V #1 {
+%   \AUP_unit_set:V #1
+% }
+% \tl_new:N  \l__AUPTEST_id_AupType
+% \AUP_unit_teardown_put:n {
+%   \cs_undefined:N \l__AUPTEST_id_AupType
+% }
+% \tl_set:Nn \l__AUPTEST_id_AupType { !lNN }
+% \AUP_use:NN \AUPTEST_TEST:V \l__AUPTEST_id_AupType
+% \AUP_unit_should_equal:nn { !lNN } { … }
+% \tl_set:Nn \l__AUPTEST_id_AupType { !lNc }
+% \AUP_use:Nc \AUPTEST_TEST:V { l__AUPTEST_id_AupType }
+% \AUP_unit_should_equal:nn { !lNc } { … }
+% \tl_set:Nn \l__AUPTEST_id_AupType { !lcc }
+% \AUP_use:cc { AUPTEST_TEST:V } { l__AUPTEST_id_AupType }
+% \AUP_unit_should_equal:nn { !lcc } { … }
+% \tl_set:Nn \l__AUPTEST_id_AupType { !lcN }
+% \AUP_use:cN { AUPTEST_TEST:V } \l__AUPTEST_id_AupType
+% \AUP_unit_should_equal:nn { !lcN } { … }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+      } {
+\AUP_debug:n { *****~E }
+        \AUP_fatal:x { Bad~signature~\token_to_str:N #1~(V) }
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_use:NN{:c/Fail_1},
+%   profiles={AupTest,no_fatal},
+% }
+% \cs_new:Npn \AUPTEST_TEST:n #1 {}
+% \AUP_use:NN \AUPTEST_TEST:n \relax
+% \AUP_unit_should_match:nn { signature } { … }
+% \cs_new:Npn \AUPTEST_TEST: {}
+% \AUP_use:NN \AUPTEST_TEST: \relax
+% \AUP_unit_should_match:nn { signature } { … }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+      }
+    }
+  } {
+\AUP_debug:n { *****~F }
+    \AUP_fatal:x { Unknown~command~\token_to_str:N #1~(N) }
+% \end{aup.gobble.debug}
+% \begin{aup.unit}{
+%   noigre,
+%   :Nn=\AUP_l_use_N:Nmti{:c},
+%   profiles={AupTest,no_fatal},
+% }
+% \AUP_l_use_N:Nmti \AUPTEST_TEST:N {} {} {}
+% \AUP_unit_should_match:nn { Unknown } { … }
+% \end{aup.unit}
+% \begin{aup.gobble.debug}
+  }
+%</!final>
+% \end{aup.gobble.debug}
+%    \begin{macrocode}
+}
+%    \end{macrocode}
+% \end{aup.macrocode}
+% \end{macro}
+%
+% \begin{aup.gobble.debug}
+%</debug.sty>
+% \end{aup.gobble.debug}
+%^^A:📄 debug.sty
+%
+%
+%
+%
+%
+% \subsection{Testing}
+% Extensions to the base testing features.
+%
+% \end{implementation}
+%
+% \StopEventually{\setlength\IndexMin{200pt}  \PrintIndex }
+%
+% \Finale
+%
+%^^A:📄 main.sty
+% \begin{verbxGobbleDebug}
+%</main.sty>
+% \end{verbxGobbleDebug}
+%
+%<*internal>
+\iffalse
+%</internal>
+%:📄 readme.md
+%<*readme.md>
+----------------------------------------------------------------
+aup --- a utility package for beanoves at least
+E-mail: jerome.laurens@u-bourgogne.fr
+Released under the LaTeX Project Public License v1.3c or later
+See https://www.latex-project.org/lppl.txt
+----------------------------------------------------------------
+
+This package is mainly a helper utility package for the |beanoves| package.
+It provides a pair of utility functions to help in testing and writing stronger code.
+%</readme.md>
+%:📄 readme.md
+%<*internal>
+\fi
+%</internal>
+%<*internal>
+\iffalse
+%</internal>
+%:📄 build.lua
+%<*build.lua>
+tagfiles={
+  "verbx.sty",
+}
+-- Detail how to set the version automatically
+function update_tag(file,content,tagname,tagdate)
+  if string.match(file, "%.dtx$") then
+    content = string.gsub(content , "\n%%␣\\date{Released␣%d%d%d%d/%d%d/%d%d}\n", "\n%%␣\\date{Released␣" .. tagname .. "}\n")
+    return string.gsub(content , "\n%%␣\\date{Released␣%d%d%d%d/%d%d/%d%d}\n", "\n%%␣\\date{Released␣" .. tagname .. "}\n")
+  elseif string.match(file, "%.md$") then
+    return string.gsub(content ,
+    "\nRelease␣%d%d%d%d/%d%d/%d%d\n",
+    "\nRelease␣" .. tagname .. "\n")
+  elseif string.match(file, "%.lua$") then
+    return string.gsub(content , ’\nrelease_date␣=␣"%d%d%d%d/%d%d/%d%d"\n’, ’\nrelease_date␣=␣"’ .. tagname .. ’"\n’)
+  end
+  return content
+end
+%</build.lua>
+%:📄 build.lua
+%<*internal>
+\fi
+%</internal>
